@@ -1,0 +1,193 @@
+--- a/src/room/CallEventAudioRenderer.tsx
++++ b/src/room/CallEventAudioRenderer.tsx
+@@ -26,0 +27,2 @@
++import busy from "../sound/antintwrk-busy-v1.wav?url";
++
+@@ -39,0 +42 @@
++  busy: { mp3: busy, ogg: busy },
+--- a/src/room/CallView.tsx
++++ b/src/room/CallView.tsx
+@@ -382 +382,7 @@
+-      reason: "timeout" | "user" | "allOthersLeft" | "decline" | "error",
++      reason:
++        | "timeout"
++        | "user"
++        | "allOthersLeft"
++        | "decline"
++        | "busy"
++        | "error",
+@@ -394,0 +401 @@
++        case "busy":
+--- a/src/room/InCallView.tsx
++++ b/src/room/InCallView.tsx
+@@ -109 +109 @@
+-    reason: "user" | "timeout" | "decline" | "allOthersLeft" | "error",
++    reason: "user" | "timeout" | "decline" | "busy" | "allOthersLeft" | "error",
+--- a/src/room/RingingAudioRenderer.test.tsx
++++ b/src/room/RingingAudioRenderer.test.tsx
+@@ -34,3 +34,3 @@
+-  const pickupState$ = new BehaviorSubject<"ringing" | "timeout" | "decline">(
+-    "ringing",
+-  );
++  const pickupState$ = new BehaviorSubject<
++    "ringing" | "timeout" | "decline" | "busy"
++  >("ringing");
+@@ -59,0 +60,30 @@
++
++test("ringback starts when audio becomes ready after ringing and stops on unmount", () => {
++  const pickupState$ = new BehaviorSubject<
++    "ringing" | "timeout" | "decline" | "busy"
++  >("ringing");
++  const vm = createRingingMedia({
++    id: aliceId,
++    userId: alice.userId,
++    displayName$: constant("Alice"),
++    mxcAvatarUrl$: constant(undefined),
++    intent: "audio",
++    pickupState$,
++  });
++  const hook = useAudioContext as MockedFunction<typeof useAudioContext>;
++  hook.mockReturnValue(null);
++  const rendered = render(<RingingAudioRenderer vm={vm} muted={false} />);
++  const stop = vi.fn().mockResolvedValue(undefined);
++  const play = vi.fn().mockReturnValue(stop);
++  hook.mockReturnValue({
++    playSound: vi.fn(),
++    playSoundLooping: play,
++    soundDuration: { ringtone: 5 },
++  });
++  rendered.rerender(<RingingAudioRenderer vm={vm} muted={false} />);
++  expect(play).toHaveBeenCalledExactlyOnceWith("ringtone", 5);
++  rendered.rerender(<RingingAudioRenderer vm={vm} muted={false} />);
++  expect(play).toHaveBeenCalledTimes(1);
++  rendered.unmount();
++  expect(stop).toHaveBeenCalledTimes(1);
++});
+--- a/src/room/RingingAudioRenderer.tsx
++++ b/src/room/RingingAudioRenderer.tsx
+@@ -15,2 +15 @@
+-import ringtoneMp3 from "../sound/ringtone.mp3?url";
+-import ringtoneOgg from "../sound/ringtone.ogg?url";
++import ringback from "../sound/antintwrk-ringback-v1.wav?url";
+@@ -18 +16,0 @@
+-import { useLatest } from "../useLatest";
+@@ -32 +30 @@
+-      ringtone: { mp3: ringtoneMp3, ogg: ringtoneOgg },
++      ringtone: { mp3: ringback, ogg: ringback },
+@@ -53 +50,0 @@
+-  const audio_ = useLatest(audio);
+@@ -58,2 +55,2 @@
+-    if (pickupState === "ringing" && audio_.current) {
+-      const endSound = audio_.current.playSoundLooping(
++    if (pickupState === "ringing" && audio) {
++      const endSound = audio.playSoundLooping(
+@@ -61 +58 @@
+-        audio_.current.soundDuration["ringtone"] ?? 1,
++        audio.soundDuration["ringtone"] ?? 1,
+@@ -69 +66 @@
+-  }, [pickupState, audio_]);
++  }, [pickupState, audio]);
+--- a/src/state/CallViewModel/CallNotificationLifecycle.test.ts
++++ b/src/state/CallViewModel/CallNotificationLifecycle.test.ts
+@@ -61 +61 @@
+-  | { outcome: "accept" | "decline" | "timeout" }
++  | { outcome: "accept" | "decline" | "timeout" | "busy" }
+--- a/src/state/CallViewModel/CallNotificationLifecycle.ts
++++ b/src/state/CallViewModel/CallNotificationLifecycle.ts
+@@ -42 +42 @@
+-export type AutoLeaveReason = "allOthersLeft" | "timeout" | "decline";
++export type AutoLeaveReason = "allOthersLeft" | "timeout" | "decline" | "busy";
+@@ -54 +54 @@
+-  outcome$: Observable<"accept" | "decline" | "timeout">;
++  outcome$: Observable<"accept" | "decline" | "timeout" | "busy">;
+@@ -155 +155,5 @@
+-          map(() => "decline" as const),
++          map(([event]) =>
++            event.getContent()["io.antintwrk.call.reason"] === "busy"
++              ? ("busy" as const)
++              : ("decline" as const),
++          ),
+@@ -192 +196,6 @@
+-          filter((outcome) => outcome === "timeout" || outcome === "decline"),
++          filter(
++            (outcome) =>
++              outcome === "timeout" ||
++              outcome === "decline" ||
++              outcome === "busy",
++          ),
+--- a/src/state/CallViewModel/CallViewModel.ts
++++ b/src/state/CallViewModel/CallViewModel.ts
+@@ -976,5 +976,6 @@
+-  const leave$: Observable<"user" | "timeout" | "decline" | "allOthersLeft"> =
+-    merge(
+-      autoLeave$,
+-      merge(userHangup$, hostHangup$).pipe(map(() => "user" as const)),
+-    ).pipe(scope.share);
++  const leave$: Observable<
++    "user" | "timeout" | "decline" | "busy" | "allOthersLeft"
++  > = merge(
++    autoLeave$,
++    merge(userHangup$, hostHangup$).pipe(map(() => "user" as const)),
++  ).pipe(scope.share);
+--- a/src/state/media/RingingMediaViewModel.ts
++++ b/src/state/media/RingingMediaViewModel.ts
+@@ -23 +23 @@
+-  pickupState$: Behavior<"ringing" | "timeout" | "decline">;
++  pickupState$: Behavior<"ringing" | "timeout" | "decline" | "busy">;
+@@ -28 +28 @@
+-  pickupState$: Behavior<"ringing" | "timeout" | "decline">;
++  pickupState$: Behavior<"ringing" | "timeout" | "decline" | "busy">;
+--- a/src/useAudioContext.tsx
++++ b/src/useAudioContext.tsx
+@@ -19,0 +20 @@
++import { antintwrkPlayToneLoop } from "./call-tone-loop.js";
+@@ -75,28 +76,8 @@
+-  if (delayS === 0) {
+-    throw Error("Looping sounds must have a delay");
+-  }
+-
+-  // Our audio loop
+-  let lastSoundPromise: Promise<void>;
+-  let nextSoundPromise: Promise<void>;
+-  let ac: AbortController | undefined;
+-  void (async (): Promise<void> => {
+-    ac = new AbortController();
+-    // Play a sound immediately
+-    lastSoundPromise = Promise.resolve();
+-    do {
+-      // Queue up the next sound.
+-      nextSoundPromise = playSound(ctx, buffer, volume, stereoPan, delayS, ac);
+-      // Await the previous sound.
+-      await lastSoundPromise;
+-      // Swap the promises over, and loop round to play the next sound.
+-      lastSoundPromise = nextSoundPromise;
+-    } while (!ac.signal.aborted);
+-  })();
+-
+-  return async () => {
+-    ac?.abort();
+-    // Wait for sounds to finish.
+-    await lastSoundPromise;
+-    await nextSoundPromise;
+-  };
++  return antintwrkPlayToneLoop(
++    ctx,
++    buffer,
++    volume,
++    stereoPan,
++    delayS,
++    controls.setPlaybackStarted,
++  );
+--- /dev/null
++++ b/src/call-tone-loop.d.ts
+@@ -0,0 +1,10 @@
++// Copyright 2026 Super David Universe LLC
++// SPDX-License-Identifier: AGPL-3.0-only
++export function antintwrkPlayToneLoop(
++  ctx: AudioContext,
++  buffer: AudioBuffer,
++  volume: number,
++  stereoPan: number,
++  periodS: number | undefined,
++  playbackStarted: () => void,
++): () => Promise<void>;

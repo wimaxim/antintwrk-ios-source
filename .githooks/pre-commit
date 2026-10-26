@@ -1,0 +1,18 @@
+#!/bin/bash
+
+export PATH="$PATH:/opt/homebrew/bin"
+
+if ! swiftformat --lint . > /dev/null 2>&1
+then
+  echo "pre-commit: Commit aborted due to SwiftFormat warnings. Please check the automatically generated fixes and try again"
+  swiftformat . > /dev/null 2>&1
+  exit 1
+fi
+
+./Tools/Scripts/validate_lfs.sh
+
+LOCAL_SCRIPT_PATH="$HOME/.local/elementx_local_dev/pre-commit"
+if [ -x "$LOCAL_SCRIPT_PATH" ]; then
+	export ELEMENTX_REPO="$(pwd)"
+	"$LOCAL_SCRIPT_PATH"
+fi

@@ -1,0 +1,76 @@
+{
+  "identifier": "71DA07C4-2F0E-4782-8DFE-69E2F05A2CE6",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "1.99",
+      "familyShareable": false,
+      "internalID": "5F32D65C-8E8A-4D74-818F-B46E173E743E",
+      "localizations": [
+        {
+          "description": "Local test fixture, not a production offer.",
+          "displayName": "Kindness Test Fixture",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "kindness_1000",
+      "referenceName": "Local Kindness Test Fixture",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "49.00",
+      "familyShareable": false,
+      "internalID": "8BFC657D-AD67-41C0-A8FA-C10F6AD0D955",
+      "localizations": [
+        {
+          "description": "Local test fixture, not a production offer.",
+          "displayName": "Lifetime Badge Test Fixture",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "verification_lifetime",
+      "referenceName": "Local Lifetime Badge Fixture",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {
+    "_failTransactionsEnabled": false,
+    "_locale": "en_US",
+    "_storefront": "USA",
+    "_timeRate": 0
+  },
+  "subscriptionGroups": [
+    {
+      "id": "93A7E310-D180-46B4-BD33-AEEE801BA475",
+      "localizations": [],
+      "name": "Local Badge Fixture",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "5.00",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "9256FF48-2915-405D-B74C-949DC899FC6E",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Local test fixture, not a production offer.",
+              "displayName": "Monthly Badge Test Fixture",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "verification_monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Local Monthly Badge Fixture",
+          "subscriptionGroupID": "93A7E310-D180-46B4-BD33-AEEE801BA475",
+          "type": "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

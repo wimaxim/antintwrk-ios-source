@@ -1,0 +1,100 @@
+//
+// Copyright 2025 Element Creations Ltd.
+// Copyright 2023-2025 New Vector Ltd.
+//
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial.
+// Please see LICENSE files in the repository root for full details.
+//
+
+import Foundation
+
+nonisolated enum EventBasedMessageTimelineItemContentType: Hashable, CustomStringConvertible {
+    case audio(AudioRoomTimelineItemContent)
+    case emote(EmoteRoomTimelineItemContent)
+    case file(FileRoomTimelineItemContent)
+    case image(ImageRoomTimelineItemContent)
+    case notice(NoticeRoomTimelineItemContent)
+    case text(TextRoomTimelineItemContent)
+    case video(VideoRoomTimelineItemContent)
+    case location(LocationRoomTimelineItemContent)
+    case voice(AudioRoomTimelineItemContent)
+    case gallery(GalleryRoomTimelineItemContent)
+    
+    var description: String {
+        switch self {
+        case .audio:
+            "audio"
+        case .emote:
+            "emote"
+        case .file:
+            "file"
+        case .image:
+            "image"
+        case .notice:
+            "notice"
+        case .text:
+            "text"
+        case .video:
+            "video"
+        case .location:
+            "location"
+        case .voice:
+            "voice"
+        case .gallery:
+            "gallery"
+        }
+    }
+}
+
+nonisolated protocol EventBasedMessageTimelineItemProtocol: EventBasedTimelineItemProtocol {
+    var contentType: EventBasedMessageTimelineItemContentType { get }
+}
+
+nonisolated extension EventBasedMessageTimelineItemProtocol {
+    var supportsMediaCaption: Bool {
+        switch contentType {
+        case .audio, .file, .image, .video, .gallery:
+            true
+        case .emote, .notice, .text, .location, .voice:
+            false
+        }
+    }
+    
+    var hasMediaCaption: Bool {
+        mediaCaption?.isBlank == false
+    }
+    
+    var mediaCaption: String? {
+        switch contentType {
+        case .audio(let content):
+            content.caption
+        case .file(let content):
+            content.caption
+        case .image(let content):
+            content.caption
+        case .video(let content):
+            content.caption
+        case .gallery(let content):
+            content.caption
+        case .emote, .notice, .text, .location, .voice:
+            nil
+        }
+    }
+    
+    var formattedMediaCaption: AttributedString? {
+        switch contentType {
+        case .audio(let content):
+            content.formattedCaption
+        case .file(let content):
+            content.formattedCaption
+        case .image(let content):
+            content.formattedCaption
+        case .video(let content):
+            content.formattedCaption
+        case .gallery(let content):
+            content.formattedCaption
+        case .emote, .notice, .text, .location, .voice:
+            nil
+        }
+    }
+}

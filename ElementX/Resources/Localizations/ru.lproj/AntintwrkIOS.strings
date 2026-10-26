@@ -1,0 +1,128 @@
+// Copyright 2026 Super David Universe LLC.
+// SPDX-License-Identifier: AGPL-3.0-only
+
+"screen_ios_messenger_pending" = "Подключение мессенджера в этой сборке iOS ещё в разработке. Вход в соцсеть уже доступен.";
+
+"screen_ant_invite_message" = "Привет! Установи себе мессенджер и соцсеть ANTINTWRK.COM: https://antintwrk.com";
+
+"screen_ant_encrypted_chat" = "Сквозное шифрование";
+
+"screen_ant_new_group_chat" = "Новый групповой чат";
+
+"screen_ant_message_keys_loading" = "Получаем ключи сообщения…";
+
+"screen_ant_invite_friends" = "Пригласить друзей";
+
+"screen_ant_group_minimum_people" = "Выберите минимум двух человек для создания группы.";
+
+"screen_ant_chat_requests" = "Запросы на переписку (%1$ld)";
+
+"screen_ant_settings_language" = "Язык";
+
+"screen_ant_licences" = "Лицензии";
+
+"screen_ant_source" = "Исходный код";
+
+"screen_ant_licences_failed" = "Не удалось загрузить лицензии.";
+
+"screen_ant_licences_project" = "antintwrk — проект и права";
+
+"screen_ant_licences_operator" = "Оператор проекта: %1$@";
+
+"screen_ant_licences_author" = "Идеолог и основатель проекта";
+
+"screen_ant_licences_backend_title" = "Серверная и веб-часть";
+
+"screen_ant_licences_backend" = "Самостоятельно разработанные оригинальные серверная часть соцсети и удалённый веб-продукт являются проприетарными. Все права их соответствующих правообладателей сохранены. Эти условия не ограничивают права на iOS-клиент, предоставленные AGPL.";
+
+"screen_ant_licences_client_title" = "iOS-клиент и открытые компоненты";
+
+"screen_ant_licences_client" = "iOS-клиент, включая нашу нативную интеграцию соцсети, распространяется под AGPL-3.0-only. Авторские права на наши оригинальные доработки: Maxim Novichkov. Исходные уведомления и лицензии зависимостей сохранены ниже.";
+
+"screen_ant_licences_backend_scope" = "Эти условия относятся только к независимым оригинальным серверным и удалённым веб-разработкам. Сторонние компоненты сохраняют собственные лицензии.";
+
+"screen_ant_licences_rights" = "Модифицированный клиент: интеграция и адаптация antintwrk, 2026. Предоставляется без гарантий в пределах, разрешённых законом. Вы вправе изменять и распространять клиент по AGPL-3.0-only; полный текст лицензии доступен ниже.";
+
+"screen_ant_share_failed" = "Не удалось импортировать содержимое. Можно поделиться текстом, изображениями JPEG, PNG, WebP или одним видео MP4, MOV, WebM. Проверьте доступ к файлам и свободное место, затем повторите.";
+
+"screen_antintwrk_passkey" = "Войти с Passkey";
+
+"screen_ant_menu_monetization" = "Монетизация";
+
+"screen_ant_menu_referrals" = "Мои рефералы";
+
+"screen_ant_menu_about" = "Об antintwrk";
+
+"screen_ant_settings_system_language" = "Язык устройства";
+
+"screen_ant_settings_account" = "Аккаунт";
+
+"screen_ant_settings_profile" = "Профиль и безопасность";
+
+"screen_ant_settings_participation" = "Участие";
+
+"screen_ant_settings_help" = "Помощь и информация";
+
+"screen_ant_settings_messenger_notifications" = "Уведомления мессенджера";
+
+"screen_ant_settings_retry" = "Не удалось открыть настройки. Попробуйте ещё раз.";
+
+"screen_ant_settings_kindness" = "Добро и поддержка проекта";
+
+"screen_ant_settings_verification" = "Верификация аккаунта";
+
+"screen_ant_settings_friend_requests" = "Заявки в друзья";
+
+"screen_ant_settings_game" = "HERO WORLD";
+
+"screen_ant_settings_contacts" = "Контакты";
+
+"screen_ant_settings_information" = "О проекте";
+
+"screen_ant_settings_manifesto" = "Манифест";
+
+"screen_ant_settings_legal" = "Правовая информация";
+
+"screen_ant_settings_community_rules" = "Правила сообщества";
+
+"screen_ant_settings_safety" = "Безопасность";
+
+"screen_ant_settings_copyright" = "Авторские права / DMCA";
+
+"screen_ant_auth_rules_link" = "Правилами ANTINTWRK";
+
+"screen_ant_auth_login_terms_notice" = "Входя в аккаунт, вы соглашаетесь с %1$@.";
+
+"screen_ant_auth_register_terms_notice" = "Регистрируясь, вы соглашаетесь с %1$@.";
+
+"screen_antintwrk_google" = "Продолжить с Google";
+
+"screen_ant_auth_no_account" = "Ещё нет аккаунта?";
+"screen_ant_auth_has_account" = "Уже есть аккаунт?";
+"screen_ant_auth_register_link" = "Зарегистрироваться";
+
+"screen_antintwrk_apple" = "Продолжить с Apple";
+
+"screen_antintwrk_apple_error" = "Не удалось завершить вход через Apple. Повторите попытку или выберите другой способ входа.";
+
+"screen_ant_push_title" = "Уведомления соцсети";
+
+"screen_ant_push_new" = "Новые уведомления";
+
+"screen_ant_push_device" = "На этом устройстве";
+
+"screen_ant_push_failed" = "Не удалось обновить уведомления. Повторите попытку.";
+
+"screen_ant_push_loading" = "Загрузка…";
+
+"screen_ant_push_categories" = "Категории действуют на всех ваших устройствах.";
+
+"screen_ant_push_friends" = "Друзья";
+
+"screen_ant_push_messages" = "Сообщения";
+
+"screen_ant_push_comments" = "Комментарии";
+
+"screen_ant_push_votes" = "Лайки";
+
+"screen_ant_push_important" = "Важные события";

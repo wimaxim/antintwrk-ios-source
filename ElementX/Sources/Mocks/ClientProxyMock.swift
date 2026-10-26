@@ -1,0 +1,180 @@
+//
+// Copyright 2025 Element Creations Ltd.
+// Copyright 2024-2025 New Vector Ltd.
+//
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial.
+// Please see LICENSE files in the repository root for full details.
+//
+
+import Combine
+import Foundation
+import MatrixRustSDKMocks
+
+struct ClientProxyMockConfiguration {
+    var homeserver = ""
+    var userIDServerName: String?
+    var userID: String = RoomMemberProxyMock.mockMe.userID
+    var deviceID: String?
+    var displayName: String? = "User display name"
+    var status: UserStatus = .init()
+    var roomSummaryProvider: RoomSummaryProviderProtocol = RoomSummaryProviderMock(.init())
+    var spaceServiceConfiguration: SpaceServiceProxyMock.Configuration = .init()
+    var roomPreviews: [RoomPreviewProxyProtocol]?
+    var defaultRoomMembers: [RoomMemberProxyMock] = .allMembers
+    var roomDirectorySearchProxy: RoomDirectorySearchProxyProtocol?
+    var overrides = Overrides()
+    
+    var recoveryState: SecureBackupRecoveryState = .enabled
+    
+    var notificationSettings = NotificationSettingsProxyMock(with: .init())
+    
+    var timelineMediaVisibility = TimelineMediaVisibility.always
+    var hideInviteAvatars = false
+    
+    var canChangeAvatar = true
+    var canChangeDisplayName = true
+    
+    var maxMediaUploadSize: UInt = 100 * 1024 * 1024
+    
+    var totalUnreadNotifications: UInt64 = 0
+    
+    class Overrides {
+        var joinedRoomIDs: Set<String> = []
+    }
+}
+
+enum ClientProxyMockError: Error {
+    case generic
+}
+
+extension ClientProxyMock {
+    // swiftlint:disable:next function_body_length
+    convenience init(_ configuration: ClientProxyMockConfiguration) {
+        self.init()
+        
+        userID = configuration.userID
+        deviceID = configuration.deviceID
+        
+        homeserver = configuration.homeserver
+        userIDServerName = configuration.userIDServerName
+        
+        totalUnreadNotifications = configuration.totalUnreadNotifications
+        
+        roomSummaryProvider = configuration.roomSummaryProvider
+        alternateRoomSummaryProvider = RoomSummaryProviderMock(.init())
+        staticRoomSummaryProvider = RoomSummaryProviderMock(.init())
+        
+        roomDirectorySearchProxyReturnValue = configuration.roomDirectorySearchProxy
+        
+        actionsPublisher = PassthroughSubject<ClientProxyAction, Never>().eraseToAnyPublisher()
+        loadingStatePublisher = .init(.notLoading)
+        verificationStatePublisher = .init(.unknown)
+        homeserverReachabilityPublisher = .init(.reachable)
+        
+        userProfilePublisher = .init(UserProfile(userID: configuration.userID,
+                                                 displayName: configuration.displayName,
+                                                 status: configuration.status))
+        
+        ignoredUsersPublisher = .init([RoomMemberProxyMock].allMembers.map(\.userID))
+        
+        notificationSettings = configuration.notificationSettings
+        
+        isOnlyDeviceLeftReturnValue = .success(false)
+        hasDevicesToVerifyAgainstReturnValue = .success(true)
+        accountURLActionReturnValue = "https://matrix.org/account"
+        canDeactivateAccount = false
+        directRoomForUserIDReturnValue = .failure(.sdkError(ClientProxyMockError.generic))
+        createDirectRoomWithExpectedRoomNameReturnValue = .failure(.sdkError(ClientProxyMockError.generic))
+        createRoomNameTopicAccessTypeIsSpaceUserIDsAvatarURLAliasLocalPartReturnValue = .failure(.sdkError(ClientProxyMockError.generic))
+        canJoinRoomWithReturnValue = true
+        joinRoomViaClosure = { roomID, _ in
+            configuration.overrides.joinedRoomIDs.insert(roomID)
+            return .success(())
+        }
+        joinRoomAliasReturnValue = .success(())
+        uploadMediaReturnValue = .failure(.sdkError(ClientProxyMockError.generic))
+        loadUserProfileIfNeededReturnValue = .success(())
+        setUserDisplayNameReturnValue = .failure(.sdkError(ClientProxyMockError.generic))
+        setUserAvatarMediaReturnValue = .success(())
+        isUserStatusSupportedReturnValue = .success(true)
+        setUserStatusReturnValue = .failure(.sdkError(ClientProxyMockError.generic))
+        removeUserAvatarReturnValue = .success(())
+        isAliasAvailableReturnValue = .success(true)
+        searchUsersSearchTermLimitReturnValue = .success(.init(results: [], limited: false))
+        profileForReturnValue = .success(.init(userID: "@a:b.com", displayName: "Some user"))
+        ignoreUserReturnValue = .success(())
+        unignoreUserReturnValue = .success(())
+        
+        trackRecentlyVisitedRoomReturnValue = .success(())
+        recentlyVisitedRoomsFilterReturnValue = []
+        recentConversationCounterpartsReturnValue = []
+        
+        let mediaLoader = MediaLoaderMock()
+        mediaLoader.loadMediaContentForSourceThrowableError = ClientProxyError.sdkError(ClientProxyMockError.generic)
+        mediaLoader.loadMediaThumbnailForSourceWidthHeightThrowableError = ClientProxyError.sdkError(ClientProxyMockError.generic)
+        mediaLoader.loadMediaFileForSourceFilenameThrowableError = ClientProxyError.sdkError(ClientProxyMockError.generic)
+        self.mediaLoader = mediaLoader
+        
+        secureBackupController = SecureBackupControllerMock(.init(recoveryState: configuration.recoveryState))
+        resetIdentityReturnValue = .success(IdentityResetHandleSDKMock(.init()))
+        
+        spaceService = SpaceServiceProxyMock(configuration.spaceServiceConfiguration)
+        linkNewDeviceServiceReturnValue = LinkNewDeviceServiceMock(.init())
+        
+        let capabilities = HomeserverCapabilitiesProxyMock()
+        capabilities.canChangeAvatarReturnValue = configuration.canChangeAvatar
+        capabilities.canChangeDisplayNameReturnValue = configuration.canChangeDisplayName
+        self.capabilities = capabilities
+        
+        roomForIdentifierClosure = { [weak self] identifier in
+            if let room = self?.roomSummaryProvider.roomListPublisher.value.first(where: { $0.id == identifier }) {
+                let joinedRoomIDs = configuration.overrides.joinedRoomIDs
+                switch room.joinRequestType {
+                case .invite where !joinedRoomIDs.contains(room.id):
+                    let roomProxy = InvitedRoomProxyMock(.init(id: room.id, name: room.name, isSpace: room.isSpace))
+                    return .invited(roomProxy)
+                case .knock where !joinedRoomIDs.contains(room.id):
+                    let roomProxy = KnockedRoomProxyMock(.init(id: room.id, name: room.name))
+                    return .knocked(roomProxy)
+                default:
+                    let roomProxy = JoinedRoomProxyMock(.init(id: room.id, name: room.name, isSpace: room.isSpace, members: configuration.defaultRoomMembers))
+                    roomProxy.loadOrFetchEventDetailsForReturnValue = .success(TimelineEventSDKMock())
+                    return .joined(roomProxy)
+                }
+            } else if let spaceServiceRoom = configuration.spaceServiceConfiguration.topLevelSpaces.first(where: { $0.id == identifier }) {
+                let roomProxy = JoinedRoomProxyMock(.init(id: spaceServiceRoom.id, name: spaceServiceRoom.name, isSpace: spaceServiceRoom.isSpace, members: configuration.defaultRoomMembers))
+                roomProxy.loadOrFetchEventDetailsForReturnValue = .success(TimelineEventSDKMock())
+                return .joined(roomProxy)
+            } else {
+                return nil
+            }
+        }
+        
+        if let roomPreviews = configuration.roomPreviews {
+            roomPreviewForIdentifierViaClosure = { roomID, _ in
+                if let preview = roomPreviews.first(where: { $0.info.id == roomID }) {
+                    .success(preview)
+                } else {
+                    .failure(.roomPreviewIsPrivate)
+                }
+            }
+        }
+        
+        userIdentityForFallBackToServerReturnValue = .success(UserIdentityProxyMock(.init()))
+        
+        underlyingIsReportRoomSupported = true
+        underlyingIsLiveKitRTCSupported = true
+        underlyingIsLoginWithQRCodeSupported = true
+        
+        timelineMediaVisibilityPublisher = CurrentValueSubject<TimelineMediaVisibility, Never>(configuration.timelineMediaVisibility).asCurrentValuePublisher()
+        hideInviteAvatarsPublisher = CurrentValueSubject<Bool, Never>(configuration.hideInviteAvatars).asCurrentValuePublisher()
+        
+        liveLocationOwnInfoUpdatesPublisher = PassthroughSubject<LiveLocationOwnInfoUpdate, Never>().eraseToAnyPublisher()
+        
+        underlyingMaxMediaUploadSize = .success(configuration.maxMediaUploadSize)
+        
+        storeSizesReturnValue = .success(.init(cryptoStore: 1, stateStore: 9, eventCacheStore: 8, mediaStore: 6))
+        
+        configurePresenceSendImmediatelyReturnValue = .success(())
+    }
+}

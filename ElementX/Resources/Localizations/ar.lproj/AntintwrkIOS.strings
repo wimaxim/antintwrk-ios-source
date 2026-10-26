@@ -1,0 +1,128 @@
+// Copyright 2026 Super David Universe LLC.
+// SPDX-License-Identifier: AGPL-3.0-only
+
+"screen_ios_messenger_pending" = "لا يزال دمج المراسلة قيد التطوير في إصدار iOS هذا. تسجيل الدخول إلى الشبكة الاجتماعية متاح.";
+
+"screen_ant_invite_message" = "مرحبًا! ثبّت تطبيق المراسلة والشبكة الاجتماعية ANTINTWRK.COM: https://antintwrk.com";
+
+"screen_ant_encrypted_chat" = "مشفّر تمامًا بين الطرفين";
+
+"screen_ant_new_group_chat" = "محادثة جماعية جديدة";
+
+"screen_ant_message_keys_loading" = "جارٍ تحميل مفاتيح الرسالة…";
+
+"screen_ant_invite_friends" = "دعوة الأصدقاء";
+
+"screen_ant_group_minimum_people" = "اختر شخصين على الأقل لإنشاء مجموعة.";
+
+"screen_ant_chat_requests" = "طلبات المحادثة (%1$ld)";
+
+"screen_ant_settings_language" = "اللغة";
+
+"screen_ant_licences" = "التراخيص";
+
+"screen_ant_source" = "الشيفرة المصدرية";
+
+"screen_ant_licences_failed" = "تعذر تحميل التراخيص.";
+
+"screen_ant_licences_project" = "antintwrk — المشروع والحقوق";
+
+"screen_ant_licences_operator" = "مشغّل المشروع: %1$@";
+
+"screen_ant_licences_author" = "صاحب الفكرة ومؤسس المشروع";
+
+"screen_ant_licences_backend_title" = "الخادم ومنتج الويب";
+
+"screen_ant_licences_backend" = "الخادم الأصلي للشبكة الاجتماعية ومنتج الويب البعيد المطوّران بصورة مستقلة هما برمجيات مملوكة. جميع حقوق أصحاب الحقوق محفوظة. لا تقيّد هذه الشروط الحقوق الممنوحة لعميل iOS بموجب AGPL.";
+
+"screen_ant_licences_client_title" = "عميل iOS ومكوّنات المصدر المفتوح";
+
+"screen_ant_licences_client" = "عميل iOS، بما في ذلك تكاملنا الأصلي للشبكة الاجتماعية، مرخّص بموجب AGPL-3.0-only. حقوق مساهماتنا الأصلية: Maxim Novichkov. تُحفظ الإشعارات الأصلية وتراخيص التبعيات أدناه.";
+
+"screen_ant_licences_backend_scope" = "تنطبق هذه الإشعارات فقط على أعمال الخادم والويب البعيد الأصلية المستقلة. تحتفظ مكونات الجهات الخارجية بتراخيصها الخاصة.";
+
+"screen_ant_licences_rights" = "عميل معدّل: تكامل وتكييف antintwrk، 2026. يُقدّم دون ضمان إلى الحد الذي يسمح به القانون. يمكنك تعديل العميل وإعادة توزيعه بموجب AGPL-3.0-only؛ النص الكامل للترخيص متاح أدناه.";
+
+"screen_ant_share_failed" = "تعذر استيراد المحتوى. شارك نصًا أو صور JPEG وPNG وWebP أو فيديو واحدًا بصيغة MP4 أوMOV أوWebM. تحقق من الوصول إلى الملفات والمساحة المتاحة ثم حاول مجددًا.";
+
+"screen_antintwrk_passkey" = "تسجيل الدخول باستخدام مفتاح مرور";
+
+"screen_ant_menu_monetization" = "تحقيق الدخل";
+
+"screen_ant_menu_referrals" = "إحالاتي";
+
+"screen_ant_menu_about" = "حول antintwrk";
+
+"screen_ant_settings_system_language" = "لغة الجهاز";
+
+"screen_ant_settings_account" = "الحساب";
+
+"screen_ant_settings_profile" = "الملف الشخصي والأمان";
+
+"screen_ant_settings_participation" = "المشاركة";
+
+"screen_ant_settings_help" = "المساعدة والمعلومات";
+
+"screen_ant_settings_messenger_notifications" = "إشعارات المراسلة";
+
+"screen_ant_settings_retry" = "تعذر فتح الإعدادات. يرجى المحاولة مرة أخرى.";
+
+"screen_ant_settings_kindness" = "Kindness ودعم المشروع";
+
+"screen_ant_settings_verification" = "توثيق الحساب";
+
+"screen_ant_settings_friend_requests" = "طلبات الصداقة";
+
+"screen_ant_settings_game" = "HERO WORLD";
+
+"screen_ant_settings_contacts" = "اتصل بنا";
+
+"screen_ant_settings_information" = "عن المشروع";
+
+"screen_ant_settings_manifesto" = "البيان";
+
+"screen_ant_settings_legal" = "معلومات قانونية";
+
+"screen_ant_settings_community_rules" = "قواعد المجتمع";
+
+"screen_ant_settings_safety" = "السلامة";
+
+"screen_ant_settings_copyright" = "حقوق النشر / DMCA";
+
+"screen_ant_auth_rules_link" = "شروط ANTINTWRK";
+
+"screen_ant_auth_login_terms_notice" = "بتسجيل الدخول، فإنك توافق على %1$@.";
+
+"screen_ant_auth_register_terms_notice" = "بإنشاء حساب، فإنك توافق على %1$@.";
+
+"screen_antintwrk_google" = "المتابعة باستخدام Google";
+
+"screen_ant_auth_no_account" = "ليس لديك حساب بعد؟";
+"screen_ant_auth_has_account" = "لديك حساب بالفعل؟";
+"screen_ant_auth_register_link" = "إنشاء حساب";
+
+"screen_antintwrk_apple" = "المتابعة باستخدام Apple";
+
+"screen_antintwrk_apple_error" = "تعذّر إكمال تسجيل الدخول باستخدام Apple. حاول مجددًا أو استخدم طريقة أخرى لتسجيل الدخول.";
+
+"screen_ant_push_title" = "إشعارات الشبكة الاجتماعية";
+
+"screen_ant_push_new" = "إشعارات جديدة";
+
+"screen_ant_push_device" = "على هذا الجهاز";
+
+"screen_ant_push_failed" = "تعذر تحديث الإشعارات. حاول مرة أخرى.";
+
+"screen_ant_push_loading" = "جارٍ التحميل…";
+
+"screen_ant_push_categories" = "تنطبق الفئات على جميع أجهزتك.";
+
+"screen_ant_push_friends" = "الأصدقاء";
+
+"screen_ant_push_messages" = "الرسائل";
+
+"screen_ant_push_comments" = "التعليقات";
+
+"screen_ant_push_votes" = "الإعجابات";
+
+"screen_ant_push_important" = "أحداث مهمة";

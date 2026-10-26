@@ -1,0 +1,33 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommitsDisabled"
+  ],
+  "labels" : [
+    "pr-misc"
+  ],
+  "minimumReleaseAge": "7 days",
+  "packageRules" : [
+    {
+      "matchManagers": ["github-actions"],
+      "groupName" : "GitHub Actions"
+    },
+    {
+      "matchManagers": ["xcodegen"],
+      "groupName": "Project Dependencies",
+      "schedule": [
+          "every 2 weeks on wednesday",
+      ]
+    },
+    {
+      "matchManagers": ["swift"],
+      "groupName" : "Tool Dependencies"
+    },
+    {
+      "managers": ["swift", "cocoapods"],
+      "matchPaths": ["compound-ios/Package.swift"],
+      "groupName": "Compound"
+    },
+  ]
+}

@@ -1,0 +1,128 @@
+// Copyright 2026 Super David Universe LLC.
+// SPDX-License-Identifier: AGPL-3.0-only
+
+"screen_ios_messenger_pending" = "Die Messenger-Anbindung wird in dieser iOS-Version noch entwickelt. Die Anmeldung im sozialen Netzwerk ist verfügbar.";
+
+"screen_ant_invite_message" = "Hallo! Installiere den Messenger und das soziale Netzwerk ANTINTWRK.COM: https://antintwrk.com";
+
+"screen_ant_encrypted_chat" = "Ende-zu-Ende verschlüsselt";
+
+"screen_ant_new_group_chat" = "Neuer Gruppenchat";
+
+"screen_ant_message_keys_loading" = "Nachrichtenschlüssel werden geladen…";
+
+"screen_ant_invite_friends" = "Freunde einladen";
+
+"screen_ant_group_minimum_people" = "Wähle mindestens zwei Personen aus, um eine Gruppe zu erstellen.";
+
+"screen_ant_chat_requests" = "Chatanfragen (%1$ld)";
+
+"screen_ant_settings_language" = "Sprache";
+
+"screen_ant_licences" = "Lizenzen";
+
+"screen_ant_source" = "Quellcode";
+
+"screen_ant_licences_failed" = "Lizenzen konnten nicht geladen werden.";
+
+"screen_ant_licences_project" = "antintwrk — Projekt und Rechte";
+
+"screen_ant_licences_operator" = "Projektbetreiber: %1$@";
+
+"screen_ant_licences_author" = "Ideengeber und Gründer des Projekts";
+
+"screen_ant_licences_backend_title" = "Server- und Webprodukt";
+
+"screen_ant_licences_backend" = "Das unabhängig entwickelte ursprüngliche Backend des sozialen Netzwerks und das entfernte Webprodukt sind proprietär. Alle Rechte der jeweiligen Rechteinhaber bleiben vorbehalten. Diese Bedingungen beschränken keine durch die AGPL gewährten Rechte am iOS-Client.";
+
+"screen_ant_licences_client_title" = "iOS-Client und Open-Source-Komponenten";
+
+"screen_ant_licences_client" = "Der iOS-Client einschließlich unserer nativen Integration des sozialen Netzwerks steht unter AGPL-3.0-only. Urheberrecht an unseren eigenen Beiträgen: Maxim Novichkov. Ursprüngliche Hinweise und Abhängigkeitslizenzen sind unten erhalten.";
+
+"screen_ant_licences_backend_scope" = "Diese Hinweise betreffen nur unabhängige eigene Server- und entfernte Webentwicklungen. Komponenten Dritter behalten ihre eigenen Lizenzen.";
+
+"screen_ant_licences_rights" = "Modifizierter Client: antintwrk-Integration und Anpassungen, 2026. Ohne Gewährleistung, soweit gesetzlich zulässig. Sie dürfen den Client gemäß AGPL-3.0-only ändern und weitergeben; der vollständige Lizenztext ist unten verfügbar.";
+
+"screen_ant_share_failed" = "Der Inhalt konnte nicht importiert werden. Teilen Sie Text, JPEG-, PNG-, WebP-Bilder oder ein MP4-, MOV-, WebM-Video. Prüfen Sie Dateizugriff und freien Speicher und versuchen Sie es erneut.";
+
+"screen_antintwrk_passkey" = "Mit einem Passkey anmelden";
+
+"screen_ant_menu_monetization" = "Monetarisierung";
+
+"screen_ant_menu_referrals" = "Meine Empfehlungen";
+
+"screen_ant_menu_about" = "Über antintwrk";
+
+"screen_ant_settings_system_language" = "Gerätesprache verwenden";
+
+"screen_ant_settings_account" = "Konto";
+
+"screen_ant_settings_profile" = "Profil und Sicherheit";
+
+"screen_ant_settings_participation" = "Mitwirken";
+
+"screen_ant_settings_help" = "Hilfe und Informationen";
+
+"screen_ant_settings_messenger_notifications" = "Messenger-Benachrichtigungen";
+
+"screen_ant_settings_retry" = "Die Einstellungen konnten nicht geöffnet werden. Bitte versuche es erneut.";
+
+"screen_ant_settings_kindness" = "Kindness und Projektunterstützung";
+
+"screen_ant_settings_verification" = "Kontoverifizierung";
+
+"screen_ant_settings_friend_requests" = "Freundschaftsanfragen";
+
+"screen_ant_settings_game" = "HERO WORLD";
+
+"screen_ant_settings_contacts" = "Kontakt";
+
+"screen_ant_settings_information" = "Über das Projekt";
+
+"screen_ant_settings_manifesto" = "Manifest";
+
+"screen_ant_settings_legal" = "Rechtliche Informationen";
+
+"screen_ant_settings_community_rules" = "Community-Regeln";
+
+"screen_ant_settings_safety" = "Sicherheit";
+
+"screen_ant_settings_copyright" = "Urheberrecht / DMCA";
+
+"screen_ant_auth_rules_link" = "Nutzungsbedingungen von ANTINTWRK";
+
+"screen_ant_auth_login_terms_notice" = "Mit der Anmeldung stimmst du den %1$@ zu.";
+
+"screen_ant_auth_register_terms_notice" = "Mit der Registrierung stimmst du den %1$@ zu.";
+
+"screen_antintwrk_google" = "Weiter mit Google";
+
+"screen_ant_auth_no_account" = "Noch kein Konto?";
+"screen_ant_auth_has_account" = "Bereits ein Konto?";
+"screen_ant_auth_register_link" = "Registrieren";
+
+"screen_antintwrk_apple" = "Mit Apple fortfahren";
+
+"screen_antintwrk_apple_error" = "Die Anmeldung mit Apple konnte nicht abgeschlossen werden. Versuche es erneut oder nutze eine andere Anmeldemethode.";
+
+"screen_ant_push_title" = "Benachrichtigungen des sozialen Netzwerks";
+
+"screen_ant_push_new" = "Neue Benachrichtigungen";
+
+"screen_ant_push_device" = "Auf diesem Gerät";
+
+"screen_ant_push_failed" = "Benachrichtigungen konnten nicht aktualisiert werden. Bitte erneut versuchen.";
+
+"screen_ant_push_loading" = "Wird geladen…";
+
+"screen_ant_push_categories" = "Kategorien gelten für alle deine Geräte.";
+
+"screen_ant_push_friends" = "Freunde";
+
+"screen_ant_push_messages" = "Nachrichten";
+
+"screen_ant_push_comments" = "Kommentare";
+
+"screen_ant_push_votes" = "Likes";
+
+"screen_ant_push_important" = "Wichtige Ereignisse";

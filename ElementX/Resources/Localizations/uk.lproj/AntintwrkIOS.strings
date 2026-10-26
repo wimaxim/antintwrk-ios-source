@@ -1,0 +1,128 @@
+// Copyright 2026 Super David Universe LLC.
+// SPDX-License-Identifier: AGPL-3.0-only
+
+"screen_ios_messenger_pending" = "Підключення месенджера в цій збірці iOS ще розробляється. Вхід у соцмережу вже доступний.";
+
+"screen_ant_invite_message" = "Привіт! Встанови месенджер і соцмережу ANTINTWRK.COM: https://antintwrk.com";
+
+"screen_ant_encrypted_chat" = "Наскрізне шифрування";
+
+"screen_ant_new_group_chat" = "Новий груповий чат";
+
+"screen_ant_message_keys_loading" = "Отримуємо ключі повідомлення…";
+
+"screen_ant_invite_friends" = "Запросити друзів";
+
+"screen_ant_group_minimum_people" = "Виберіть щонайменше двох людей для створення групи.";
+
+"screen_ant_chat_requests" = "Запити на листування (%1$ld)";
+
+"screen_ant_settings_language" = "Мова";
+
+"screen_ant_licences" = "Ліцензії";
+
+"screen_ant_source" = "Вихідний код";
+
+"screen_ant_licences_failed" = "Не вдалося завантажити ліцензії.";
+
+"screen_ant_licences_project" = "antintwrk — проєкт і права";
+
+"screen_ant_licences_operator" = "Оператор проєкту: %1$@";
+
+"screen_ant_licences_author" = "Ідейний натхненник і засновник проєкту";
+
+"screen_ant_licences_backend_title" = "Серверна та вебчастина";
+
+"screen_ant_licences_backend" = "Незалежно розроблені оригінальні серверна частина соцмережі та віддалений вебпродукт є пропрієтарними. Усі права їхніх відповідних правовласників збережені. Ці умови не обмежують прав на iOS-клієнт, наданих AGPL.";
+
+"screen_ant_licences_client_title" = "iOS-клієнт і відкриті компоненти";
+
+"screen_ant_licences_client" = "iOS-клієнт, включно з нашою нативною інтеграцією соцмережі, поширюється за AGPL-3.0-only. Авторські права на наші оригінальні доопрацювання: Maxim Novichkov. Початкові повідомлення та ліцензії залежностей збережені нижче.";
+
+"screen_ant_licences_backend_scope" = "Ці умови стосуються лише незалежних оригінальних серверних і віддалених веброзробок. Сторонні компоненти зберігають власні ліцензії.";
+
+"screen_ant_licences_rights" = "Модифікований клієнт: інтеграція й адаптація antintwrk, 2026. Надається без гарантій у межах, дозволених законом. Ви маєте право змінювати й поширювати клієнт за AGPL-3.0-only; повний текст ліцензії доступний нижче.";
+
+"screen_ant_share_failed" = "Не вдалося імпортувати вміст. Можна поділитися текстом, зображеннями JPEG, PNG, WebP або одним відео MP4, MOV, WebM. Перевірте доступ до файлів і вільне місце та спробуйте ще раз.";
+
+"screen_antintwrk_passkey" = "Увійти з Passkey";
+
+"screen_ant_menu_monetization" = "Монетизація";
+
+"screen_ant_menu_referrals" = "Мої реферали";
+
+"screen_ant_menu_about" = "Про antintwrk";
+
+"screen_ant_settings_system_language" = "Мова пристрою";
+
+"screen_ant_settings_account" = "Обліковий запис";
+
+"screen_ant_settings_profile" = "Профіль і безпека";
+
+"screen_ant_settings_participation" = "Участь";
+
+"screen_ant_settings_help" = "Допомога та інформація";
+
+"screen_ant_settings_messenger_notifications" = "Сповіщення месенджера";
+
+"screen_ant_settings_retry" = "Не вдалося відкрити налаштування. Спробуйте ще раз.";
+
+"screen_ant_settings_kindness" = "Добро та підтримка проєкту";
+
+"screen_ant_settings_verification" = "Верифікація акаунта";
+
+"screen_ant_settings_friend_requests" = "Запити в друзі";
+
+"screen_ant_settings_game" = "HERO WORLD";
+
+"screen_ant_settings_contacts" = "Контакти";
+
+"screen_ant_settings_information" = "Про проєкт";
+
+"screen_ant_settings_manifesto" = "Маніфест";
+
+"screen_ant_settings_legal" = "Правова інформація";
+
+"screen_ant_settings_community_rules" = "Правила спільноти";
+
+"screen_ant_settings_safety" = "Безпека";
+
+"screen_ant_settings_copyright" = "Авторські права / DMCA";
+
+"screen_ant_auth_rules_link" = "Правилами ANTINTWRK";
+
+"screen_ant_auth_login_terms_notice" = "Входячи в акаунт, ви погоджуєтеся з %1$@.";
+
+"screen_ant_auth_register_terms_notice" = "Реєструючись, ви погоджуєтеся з %1$@.";
+
+"screen_antintwrk_google" = "Продовжити з Google";
+
+"screen_ant_auth_no_account" = "Ще немає акаунта?";
+"screen_ant_auth_has_account" = "Вже є акаунт?";
+"screen_ant_auth_register_link" = "Зареєструватися";
+
+"screen_antintwrk_apple" = "Продовжити з Apple";
+
+"screen_antintwrk_apple_error" = "Не вдалося завершити вхід через Apple. Спробуйте ще раз або виберіть інший спосіб входу.";
+
+"screen_ant_push_title" = "Сповіщення соцмережі";
+
+"screen_ant_push_new" = "Нові сповіщення";
+
+"screen_ant_push_device" = "На цьому пристрої";
+
+"screen_ant_push_failed" = "Не вдалося оновити сповіщення. Спробуйте ще раз.";
+
+"screen_ant_push_loading" = "Завантаження…";
+
+"screen_ant_push_categories" = "Категорії діють на всіх ваших пристроях.";
+
+"screen_ant_push_friends" = "Друзі";
+
+"screen_ant_push_messages" = "Повідомлення";
+
+"screen_ant_push_comments" = "Коментарі";
+
+"screen_ant_push_votes" = "Вподобання";
+
+"screen_ant_push_important" = "Важливі події";

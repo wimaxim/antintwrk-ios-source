@@ -1,0 +1,81 @@
+name: UnitTests
+
+schemes:
+  UnitTests:
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+    build:
+      targets:
+        UnitTests: all
+    profile:
+      config: Release
+    run:
+      config: Debug
+      disableMainThreadChecker: false
+    test:
+      config: Debug
+      disableMainThreadChecker: false
+      gatherCoverageData: true
+      coverageTargets:
+        - ElementX
+      testPlans:
+        - path: UnitTests.xctestplan
+          defaultPlan: true
+
+  StoreKitLocal:
+    build:
+      targets:
+        ElementX: all
+        UnitTests: [testing]
+    run:
+      config: Debug
+      storeKitConfiguration: UnitTests/SupportingFiles/AntintwrkTestStore.storekit
+      environmentVariables:
+        IS_RUNNING_UNIT_TESTS: "1"
+    test:
+      config: Debug
+      testPlans:
+        - path: StoreKitLocal.xctestplan
+          defaultPlan: true
+
+targets:
+  UnitTests:
+    type: bundle.unit-test
+    platform: iOS
+
+    dependencies:
+    - target: ElementX
+    - target: MapLibreInterface
+    - package: MatrixRustSDK
+    - package: AsyncAlgorithms
+    - package: Dynamic
+    - package: BuildExtensions
+      product: Macros
+
+    info:
+      path: ../SupportingFiles/Info.plist
+
+    settings:
+      base:
+        PRODUCT_NAME: UnitTests
+        PRODUCT_BUNDLE_IDENTIFIER: ${BASE_BUNDLE_IDENTIFIER}.unit.tests
+        # Requires iOS 26 so tests exercise the Observations-based observe(_:) overload.
+        IPHONEOS_DEPLOYMENT_TARGET: '26.0'
+        SWIFT_VERSION: 6.2
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+      debug:
+      release:
+
+    sources:
+    - path: ../Sources
+    - path: ../SupportingFiles
+    - path: ../../Components/DevelopmentAssets/Media
+    - path: ../../Components/DevelopmentAssets/ClassicAppFixtures
+      buildPhase: resources # Necessary to add binary files to the target.
+    - path: ../../ElementX/Sources/Other/Extensions/Publisher.swift
+    - path: ../../ElementX/Sources/Other/InfoPlistReader.swift
+    - path: ../../Tools/Scripts/Templates/SimpleScreenExample/Tests/Unit
+    

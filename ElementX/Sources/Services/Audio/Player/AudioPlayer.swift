@@ -1,0 +1,269 @@
+//
+// Copyright 2025 Element Creations Ltd.
+// Copyright 2023-2025 New Vector Ltd.
+//
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial.
+// Please see LICENSE files in the repository root for full details.
+//
+
+import AVFoundation
+import Combine
+import Foundation
+import UIKit
+
+private enum InternalAudioPlayerState {
+    case none
+    case loading
+    case readyToPlay
+    case playing
+    case paused
+    case stopped
+    case finishedPlaying
+    case error(Error)
+}
+
+class AudioPlayer: NSObject, AudioPlayerProtocol {
+    var sourceURL: URL?
+    
+    private var playerItem: AVPlayerItem?
+    private var internalAudioPlayer: AVQueuePlayer?
+    
+    private var cancellables = Set<AnyCancellable>()
+    private let actionsSubject: PassthroughSubject<AudioPlayerAction, Never> = .init()
+    var actions: AnyPublisher<AudioPlayerAction, Never> {
+        actionsSubject.eraseToAnyPublisher()
+    }
+    
+    private var internalState = InternalAudioPlayerState.none
+    
+    private var statusObserver: NSKeyValueObservation?
+    private var rateObserver: NSKeyValueObservation?
+    private var autoplay = false
+    
+    private let audioSession = AVAudioSession.sharedInstance()
+    
+    @CancellableTask private var releaseAudioSessionTask: Task<Void, Never>?
+    
+    private let releaseAudioSessionTimeoutInterval = 5.0
+    
+    private(set) var playbackURL: URL?
+    private(set) var playbackSpeed: Float = 1.0
+    
+    private var deinitInProgress = false
+    
+    var duration: TimeInterval {
+        abs(CMTimeGetSeconds(internalAudioPlayer?.currentItem?.duration ?? .zero))
+    }
+    
+    var currentTime: TimeInterval {
+        let currentTime = abs(CMTimeGetSeconds(internalAudioPlayer?.currentTime() ?? .zero))
+        return currentTime.isFinite ? currentTime : .zero
+    }
+    
+    var state: MediaPlayerState {
+        if case .loading = internalState {
+            return .loading
+        }
+        if case .stopped = internalState {
+            return .stopped
+        }
+        if case .playing = internalState {
+            return .playing
+        }
+        if case .paused = internalState {
+            return .paused
+        }
+        if case .error = internalState {
+            return .error
+        }
+        return .stopped
+    }
+    
+    private var isStopped = true
+    
+    isolated deinit {
+        deinitInProgress = true
+        stop()
+        unloadContent()
+    }
+    
+    func load(sourceURL: URL, playbackURL: URL, autoplay: Bool) {
+        unloadContent()
+        setInternalState(.loading)
+        self.sourceURL = sourceURL
+        self.playbackURL = playbackURL
+        self.autoplay = autoplay
+        playerItem = AVPlayerItem(url: playbackURL)
+        internalAudioPlayer = AVQueuePlayer(playerItem: playerItem)
+        addObservers()
+    }
+    
+    func reset() {
+        stop()
+        unloadContent()
+    }
+    
+    func play() {
+        isStopped = false
+        setupAudioSession()
+        internalAudioPlayer?.rate = playbackSpeed
+    }
+    
+    func pause() {
+        guard case .playing = internalState else { return }
+        internalAudioPlayer?.pause()
+        releaseAudioSession(after: releaseAudioSessionTimeoutInterval)
+    }
+    
+    func stop() {
+        guard !isStopped else { return }
+        isStopped = true
+        internalAudioPlayer?.pause()
+        internalAudioPlayer?.seek(to: .zero)
+        releaseAudioSession(after: releaseAudioSessionTimeoutInterval)
+    }
+    
+    func seek(to progress: Double) async {
+        guard let internalAudioPlayer else { return }
+        let time = progress * duration
+        await internalAudioPlayer.seek(to: CMTime(seconds: time, preferredTimescale: 60))
+    }
+    
+    func setPlaybackSpeed(_ speed: Float) {
+        playbackSpeed = speed
+        if state == .playing {
+            internalAudioPlayer?.rate = speed
+        }
+    }
+    
+    // MARK: - Private
+    
+    private func setupAudioSession() {
+        releaseAudioSessionTask = nil
+        do {
+            try audioSession.setCategory(.playback)
+            try audioSession.setActive(true)
+        } catch {
+            MXLog.error("Could not redirect audio playback to speakers.")
+        }
+    }
+    
+    private func releaseAudioSession(after timeInterval: TimeInterval) {
+        guard !deinitInProgress else {
+            releaseAudioSession()
+            return
+        }
+        releaseAudioSessionTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(timeInterval))
+            guard !Task.isCancelled else { return }
+            
+            self?.releaseAudioSession()
+        }
+    }
+    
+    private func releaseAudioSession() {
+        releaseAudioSessionTask = nil
+        if audioSession.category == .playback, !audioSession.isOtherAudioPlaying {
+            MXLog.info("releasing audio session")
+            try? audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+        }
+    }
+    
+    private func unloadContent() {
+        sourceURL = nil
+        playbackURL = nil
+        internalAudioPlayer?.replaceCurrentItem(with: nil)
+        internalAudioPlayer = nil
+        playerItem = nil
+        removeObservers()
+    }
+    
+    private func addObservers() {
+        // Deliberately not shadowing the properties, the observers compare against them to detect stale updates.
+        guard let currentAudioPlayer = internalAudioPlayer, let currentItem = playerItem else {
+            return
+        }
+        
+        statusObserver = currentItem.observe(\.status, options: [.old, .new]) { [weak self] item, _ in
+            // KVO fires on an arbitrary thread, hop to the main actor with the values we need.
+            let status = item.status
+            let error = item.error
+            Task { @MainActor [weak self] in
+                // Ignore an update that was queued before the content was replaced, it would leave
+                // the state out of sync with the item that is loaded now.
+                guard let self, item === playerItem else { return }
+                
+                switch status {
+                case .failed:
+                    setInternalState(.error(error ?? AudioPlayerError.genericError))
+                case .readyToPlay:
+                    guard state == .loading else { return }
+                    setInternalState(.readyToPlay)
+                default:
+                    break
+                }
+            }
+        }
+        
+        rateObserver = currentAudioPlayer.observe(\.rate, options: [.old, .new]) { [weak self] player, _ in
+            // KVO fires on an arbitrary thread, hop to the main actor with the values we need.
+            let rate = player.rate
+            Task { @MainActor [weak self] in
+                guard let self, player === internalAudioPlayer else { return }
+                
+                if rate == 0 {
+                    if isStopped {
+                        setInternalState(.stopped)
+                    } else {
+                        setInternalState(.paused)
+                    }
+                } else {
+                    setInternalState(.playing)
+                }
+            }
+        }
+        
+        NotificationCenter.default.publisher(for: Notification.Name.AVPlayerItemDidPlayToEndTime, object: currentItem)
+            // The notification isn't posted on the main thread, unlike the state updates it triggers.
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                setInternalState(.finishedPlaying)
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func removeObservers() {
+        statusObserver?.invalidate()
+        rateObserver?.invalidate()
+        cancellables.removeAll()
+    }
+    
+    private func setInternalState(_ state: InternalAudioPlayerState) {
+        internalState = state
+        switch state {
+        case .none:
+            break
+        case .loading:
+            actionsSubject.send(.didStartLoading)
+        case .readyToPlay:
+            actionsSubject.send(.didFinishLoading)
+            if autoplay {
+                autoplay = false
+                play()
+            }
+        case .playing:
+            actionsSubject.send(.didStartPlaying)
+        case .paused:
+            actionsSubject.send(.didPausePlaying)
+        case .stopped:
+            actionsSubject.send(.didStopPlaying)
+        case .finishedPlaying:
+            actionsSubject.send(.didFinishPlaying)
+            unloadContent()
+        case .error(let error):
+            MXLog.error("audio player did fail. \(error)")
+            actionsSubject.send(.didFailWithError(error: error))
+        }
+    }
+}

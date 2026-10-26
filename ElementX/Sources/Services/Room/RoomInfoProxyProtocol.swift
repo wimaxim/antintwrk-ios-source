@@ -1,0 +1,178 @@
+//
+// Copyright 2025 Element Creations Ltd.
+// Copyright 2025 New Vector Ltd.
+//
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial.
+// Please see LICENSE files in the repository root for full details.
+//
+
+import Foundation
+import MatrixRustSDK
+
+nonisolated protocol BaseRoomInfoProxyProtocol: Sendable {
+    var id: String { get }
+    var displayName: String? { get }
+    var topic: String? { get }
+    var canonicalAlias: String? { get }
+    var avatarURL: URL? { get }
+    var activeMembersCount: Int { get }
+    var joinedMembersCount: Int { get }
+    var isDirect: Bool { get }
+    var isSpace: Bool { get }
+    
+    var successor: SuccessorRoom? { get }
+    var heroes: [RoomHero] { get }
+}
+
+// sourcery: AutoMockable
+nonisolated protocol RoomInfoProxyProtocol: BaseRoomInfoProxyProtocol {
+    var id: String { get }
+    // periphery:ignore - might be useful to have
+    var creators: [String] { get }
+    var displayName: String? { get }
+    // periphery:ignore - might be useful to have
+    var rawName: String? { get }
+    var topic: String? { get }
+    /// The room's avatar URL. Use this for editing and favour ``avatar`` for display.
+    var avatarURL: URL? { get }
+    
+    var isEncrypted: Bool { get }
+    var isDirect: Bool { get }
+    var isDM: Bool { get }
+    var isSpace: Bool { get }
+    var isFavourite: Bool { get }
+    
+    var canonicalAlias: String? { get }
+    var alternativeAliases: [String] { get }
+    var membership: Membership { get }
+    // periphery:ignore - might be useful to have
+    var inviter: RoomMemberProxyProtocol? { get }
+    
+    var activeMembersCount: Int { get }
+    // periphery:ignore - might be useful to have
+    var invitedMembersCount: Int { get }
+    var joinedMembersCount: Int { get }
+    // periphery:ignore - might be useful to have
+    var highlightCount: Int { get }
+    // periphery:ignore - might be useful to have
+    var notificationCount: Int { get }
+    // periphery:ignore - might be useful to have
+    var cachedUserDefinedNotificationMode: RoomNotificationMode? { get }
+    var hasRoomCall: Bool { get }
+    var activeRoomCallIntent: CallIntent? { get }
+    var activeRoomCallParticipants: [String] { get }
+    // periphery:ignore - might be useful to have
+    var isMarkedUnread: Bool { get }
+    // periphery:ignore - might be useful to have
+    var unreadMessagesCount: UInt { get }
+    // periphery:ignore - might be useful to have
+    var unreadNotificationsCount: UInt { get }
+    // periphery:ignore - might be useful to have
+    var unreadMentionsCount: UInt { get }
+    var fullyReadEventID: String? { get }
+    var pinnedEventIDs: Set<String> { get }
+    var joinRule: JoinRule? { get }
+    var historyVisibility: RoomHistoryVisibility { get }
+    
+    var powerLevels: RoomPowerLevelsProxyProtocol? { get }
+}
+
+extension BaseRoomInfoProxyProtocol {
+    /// The room's avatar info for use in a ``RoomAvatarImage``.
+    var avatar: RoomAvatar {
+        guard successor == nil else {
+            return .tombstoned
+        }
+        
+        if isSpace {
+            return .space(id: id, name: displayName, avatarURL: avatarURL)
+        }
+        
+        if isDirect, avatarURL == nil, heroes.count == 1 {
+            return .heroes(heroes.map(UserProfile.init))
+        }
+        
+        return .room(id: id, name: displayName, avatarURL: avatarURL)
+    }
+    
+    var statusEmoji: Character? {
+        guard case let .heroes(heroes) = avatar else { return nil }
+        return heroes.first?.status.displayed?.emoji
+    }
+}
+
+extension RoomInfoProxyProtocol {
+    /// A room might be non public but also not private given the fact that the join rule might be missing or unsupported.
+    var isPrivate: Bool? {
+        guard let joinRule else {
+            return nil
+        }
+        
+        return switch joinRule {
+        case .invite, .knock, .restricted, .knockRestricted:
+            true
+        case .public:
+            false
+        case .custom: // We don't know how to handle this
+            nil
+        }
+    }
+    
+    /// Checks if the other person left the room in a direct chat
+    var isUserAloneInDirectRoom: Bool {
+        isDirect && activeMembersCount == 1
+    }
+    
+    /// The room's name, falling back to its identifier when it doesn't have one.
+    var displayNameOrID: String {
+        displayName ?? id
+    }
+    
+    /// Find the first alias that matches the given homeserver
+    /// - Parameters:
+    ///   - serverName: the homserver in question
+    ///   - useFallback: whether to return any alias if none match
+    func firstAliasMatching(serverName: String?, useFallback: Bool) -> String? {
+        guard let serverName else { return nil }
+        
+        // Check if the canonical alias matches the homeserver
+        if let canonicalAlias,
+           canonicalAlias.contains(serverName) {
+            return canonicalAlias
+        }
+        
+        // Otherwise check the alternative aliases and return the first one that matches
+        if let matchingAlternativeAlias = alternativeAliases.first(where: { $0.contains(serverName) }) {
+            return matchingAlternativeAlias
+        }
+        
+        guard useFallback else {
+            return nil
+        }
+        
+        // Or just return the canonical alias if any
+        if let canonicalAlias {
+            return canonicalAlias
+        }
+        
+        // And finally return whatever the first alternative alias is
+        return alternativeAliases.first
+    }
+    
+    /// If present, the state of history sharing in this room.
+    var historySharingState: RoomHistorySharingState? {
+        guard isEncrypted else {
+            return nil
+        }
+        return switch historyVisibility {
+        case .joined, .invited:
+            .hidden
+        case .shared:
+            .shared
+        case .worldReadable:
+            .worldReadable
+        case .custom:
+            nil
+        }
+    }
+}

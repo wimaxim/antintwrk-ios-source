@@ -1,0 +1,53 @@
+diff --git a/src/state/CallViewModel/CallNotificationLifecycle.test.ts b/src/state/CallViewModel/CallNotificationLifecycle.test.ts
+index e5281cf..51212e8 100644
+--- a/src/state/CallViewModel/CallNotificationLifecycle.test.ts
++++ b/src/state/CallViewModel/CallNotificationLifecycle.test.ts
+@@ -16 +16 @@ import { type RTCCallIntent } from "matrix-js-sdk/lib/matrixrtc";
+-import { map, mergeMap, NEVER, type Observable, startWith } from "rxjs";
++import { map, mergeMap, NEVER, Observable, startWith } from "rxjs";
+@@ -314,0 +315,45 @@ test("decline event from wrong sender is ignored (times out)", () => {
++
++test("fast pickup reaches ringing UI after auto-leave subscribes first", () => {
++  withTestScheduler(({ scope, expectObservable, hot }) => {
++    const { ringAttempts$, autoLeave$ } = createCallNotificationLifecycle$({
++      scope,
++      ...defaultProps,
++      memberships$: constant(new Epoch([aliceRtcMember])),
++      sentCallNotification$: hot("-a", { a: mockRingEvent("$fast", 30) }),
++    });
++    autoLeave$.subscribe();
++    expectObservable(summarizeRingAttempts$(ringAttempts$)).toBe("-(aA)", {
++      a: { intent: "audio", recipient: alice.userId },
++      A: { outcome: "accept" },
++    });
++  });
++});
++
++test("fast decline reaches both independent consumers", () => {
++  withTestScheduler(({ scope, expectObservable, hot }) => {
++    const { ringAttempts$, autoLeave$ } = createCallNotificationLifecycle$({
++      scope,
++      ...defaultProps,
++      sentCallNotification$: hot("-a", { a: mockRingEvent("$fast", 30) }),
++      receivedDecline$: new Observable((subscriber) => {
++        subscriber.next([
++          new MatrixEvent({
++            type: EventType.RTCDecline,
++            sender: alice.userId,
++            content: {
++              "m.relates_to": { rel_type: "m.reference", event_id: "$fast" },
++            },
++          }),
++          undefined,
++          undefined,
++          undefined,
++        ] as never);
++      }),
++    });
++    autoLeave$.subscribe();
++    expectObservable(summarizeRingAttempts$(ringAttempts$)).toBe("-(aD)", {
++      a: { intent: "audio", recipient: alice.userId },
++      D: { outcome: "decline" },
++    });
++  });
++});

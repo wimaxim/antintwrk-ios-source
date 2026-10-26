@@ -1,0 +1,115 @@
+//
+// Copyright 2025 Element Creations Ltd.
+// Copyright 2024-2025 New Vector Ltd.
+//
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial.
+// Please see LICENSE files in the repository root for full details.
+//
+
+import Foundation
+import MatrixRustSDK
+import MatrixRustSDKMocks
+
+nonisolated extension ClientSDKMock {
+    struct Configuration {
+        // MARK: Authentication
+        
+        var serverName = "matrix.org"
+        var homeserverURL = "https://matrix-client.matrix.org"
+        var slidingSyncVersion = SlidingSyncVersion.native
+        var oAuthLoginURL: String? = "https://account.matrix.org/authorize"
+        var supportsOAuthCreatePrompt = true
+        var supportsPasswordLogin = true
+        var elementWellKnown: String?
+        var validCredentials = (username: "alice", password: "12345678")
+        
+        // MARK: Session
+        
+        var userID: String?
+        static let defaultDeviceID = "ABCDEFGH"
+        var deviceID = defaultDeviceID
+        var session = Session(accessToken: UUID().uuidString,
+                              refreshToken: nil,
+                              userId: "@alice:matrix.org",
+                              deviceId: defaultDeviceID,
+                              homeserverUrl: "https://matrix-client.matrix.org",
+                              oauthData: nil,
+                              slidingSyncVersion: .native)
+    }
+    
+    enum MockError: Error { case generic }
+    
+    convenience init(_ configuration: Configuration) {
+        self.init()
+        
+        homeserverLoginDetailsReturnValue = HomeserverLoginDetailsSDKMock(configuration: configuration)
+        slidingSyncVersionReturnValue = configuration.slidingSyncVersion
+        userIdServerNameThrowableError = MockError.generic
+        serverReturnValue = "https://\(configuration.serverName)"
+        homeserverReturnValue = configuration.homeserverURL
+        urlForOauthOauthConfigurationPromptLoginHintDeviceIdAdditionalScopesReturnValue = OAuthAuthorizationDataSDKMock(configuration: configuration)
+        loginUsernamePasswordInitialDeviceNameDeviceIdClosure = { [weak self] username, password, _, _ in
+            guard username == configuration.validCredentials.username,
+                  password == configuration.validCredentials.password else {
+                throw MockError.generic // use the matrix error
+            }
+            if username.hasPrefix("@"), username.contains(":") {
+                self?.userIdReturnValue = username
+            } else {
+                self?.userIdReturnValue = "@\(username):\(configuration.serverName)"
+            }
+        }
+        
+        userIdReturnValue = configuration.userID
+        deviceIdReturnValue = configuration.deviceID
+        sessionReturnValue = configuration.session
+        getUrlUrlClosure = { url in
+            guard url.contains(".well-known/element/element.json") else { throw MockError.generic }
+            if let elementWellKnownData = configuration.elementWellKnown?.data(using: .utf8) {
+                return elementWellKnownData
+            } else {
+                throw MockError.generic
+            }
+        }
+        
+        encryptionReturnValue = EncryptionSDKMock(.init())
+        getNotificationSettingsReturnValue = NotificationSettingsSDKMock()
+        homeserverCapabilitiesReturnValue = HomeserverCapabilitiesSDKMock()
+        spaceServiceReturnValue = SpaceServiceSDKMock(.init())
+        searchServiceReturnValue = SearchServiceSDKMock(.init())
+        syncServiceReturnValue = SyncServiceBuilderSDKMock(.init())
+        
+        setDelegateDelegateReturnValue = TaskHandleSDKMock()
+        subscribeToIgnoredUsersListenerReturnValue = TaskHandleSDKMock()
+        subscribeToSendQueueStatusListenerReturnValue = TaskHandleSDKMock()
+        subscribeToSendQueueUpdatesListenerReturnValue = TaskHandleSDKMock()
+        subscribeToMediaPreviewConfigListenerReturnValue = TaskHandleSDKMock()
+        subscribeToOwnBeaconInfoUpdatesListenerReturnValue = TaskHandleSDKMock()
+        isProfilesSlidingSyncExtensionSupportedReturnValue = false
+        isUserStatusSupportedReturnValue = false
+    }
+}
+
+nonisolated extension HomeserverLoginDetailsSDKMock {
+    convenience init(configuration: ClientSDKMock.Configuration) {
+        self.init()
+        
+        slidingSyncVersionReturnValue = configuration.slidingSyncVersion
+        supportsPasswordLoginReturnValue = configuration.supportsPasswordLogin
+        supportsOauthLoginReturnValue = configuration.oAuthLoginURL != nil
+        supportedOauthPromptsReturnValue = switch (configuration.oAuthLoginURL, configuration.supportsOAuthCreatePrompt) {
+        case (.none, _): []
+        case (.some, true): [.consent, .create]
+        case (.some, false): [.consent]
+        }
+        urlReturnValue = configuration.homeserverURL
+    }
+}
+
+nonisolated extension OAuthAuthorizationDataSDKMock {
+    convenience init(configuration: ClientSDKMock.Configuration) {
+        self.init()
+        
+        loginUrlReturnValue = configuration.oAuthLoginURL
+    }
+}

@@ -1,0 +1,58 @@
+//
+// Copyright 2025 Element Creations Ltd.
+// Copyright 2022-2025 New Vector Ltd.
+//
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial.
+// Please see LICENSE files in the repository root for full details.
+//
+
+import Combine
+import SwiftUI
+
+struct InviteUsersScreenCoordinatorParameters {
+    let userSession: UserSessionProtocol
+    let roomType: InviteUsersScreenRoomType
+    let isSkippable: Bool
+    let userDiscoveryService: UserDiscoveryServiceProtocol
+    let userIndicatorController: UserIndicatorControllerProtocol
+}
+
+enum InviteUsersScreenCoordinatorAction {
+    case dismiss
+    case openRoom(roomID: String)
+}
+
+final class InviteUsersScreenCoordinator: CoordinatorProtocol {
+    private let viewModel: InviteUsersScreenViewModelProtocol
+    private let actionsSubject: PassthroughSubject<InviteUsersScreenCoordinatorAction, Never> = .init()
+    private var cancellables = Set<AnyCancellable>()
+    
+    var actions: AnyPublisher<InviteUsersScreenCoordinatorAction, Never> {
+        actionsSubject.eraseToAnyPublisher()
+    }
+    
+    init(parameters: InviteUsersScreenCoordinatorParameters) {
+        viewModel = InviteUsersScreenViewModel(userSession: parameters.userSession,
+                                               roomType: parameters.roomType,
+                                               isSkippable: parameters.isSkippable,
+                                               userDiscoveryService: parameters.userDiscoveryService,
+                                               userIndicatorController: parameters.userIndicatorController)
+    }
+    
+    func start() {
+        viewModel.actions.sink { [weak self] action in
+            guard let self else { return }
+            switch action {
+            case .dismiss:
+                actionsSubject.send(.dismiss)
+            case .openRoom(let roomID):
+                actionsSubject.send(.openRoom(roomID: roomID))
+            }
+        }
+        .store(in: &cancellables)
+    }
+    
+    func toPresentable() -> AnyView {
+        AnyView(InviteUsersScreen(context: viewModel.context))
+    }
+}

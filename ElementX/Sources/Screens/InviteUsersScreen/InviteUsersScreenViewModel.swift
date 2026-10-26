@@ -1,0 +1,269 @@
+//
+// Copyright 2025 Element Creations Ltd.
+// Copyright 2022-2025 New Vector Ltd.
+//
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial.
+// Please see LICENSE files in the repository root for full details.
+//
+
+import Combine
+import MatrixRustSDK
+import SwiftUI
+
+typealias InviteUsersScreenViewModelType = StateStoreViewModel<InviteUsersScreenViewState, InviteUsersScreenViewAction>
+
+class InviteUsersScreenViewModel: InviteUsersScreenViewModelType, InviteUsersScreenViewModelProtocol {
+    private let clientProxy: ClientProxyProtocol
+    private let roomType: InviteUsersScreenRoomType
+    private let userDiscoveryService: UserDiscoveryServiceProtocol
+    private let userIndicatorController: UserIndicatorControllerProtocol
+    
+    private var suggestedUsers = [UserProfile]()
+    
+    private let actionsSubject: PassthroughSubject<InviteUsersScreenViewModelAction, Never> = .init()
+    var actions: AnyPublisher<InviteUsersScreenViewModelAction, Never> {
+        actionsSubject.eraseToAnyPublisher()
+    }
+    
+    init(userSession: UserSessionProtocol,
+         roomType: InviteUsersScreenRoomType,
+         isSkippable: Bool,
+         userDiscoveryService: UserDiscoveryServiceProtocol,
+         userIndicatorController: UserIndicatorControllerProtocol) {
+        clientProxy = userSession.clientProxy
+        self.roomType = roomType
+        self.userDiscoveryService = userDiscoveryService
+        self.userIndicatorController = userIndicatorController
+        
+        let mandatoryInvitees: [UserProfile] = if case .draft(let invitees) = roomType {
+            invitees
+        } else {
+            []
+        }
+        
+        super.init(initialViewState: InviteUsersScreenViewState(selectedUsers: mandatoryInvitees,
+                                                                mandatoryInvitees: mandatoryInvitees,
+                                                                isSkippable: isSkippable),
+                   mediaProvider: userSession.mediaProvider)
+        
+        setupSubscriptions()
+        fetchMembersIfNeeded()
+        
+        Task {
+            suggestedUsers = await userSession.clientProxy.recentConversationCounterparts()
+            
+            if state.usersSection.type == .suggestions {
+                state.usersSection = .init(type: .suggestions, users: suggestedUsers)
+            }
+        }
+    }
+    
+    // MARK: - Public
+    
+    override func process(viewAction: InviteUsersScreenViewAction) {
+        switch viewAction {
+        case .cancel:
+            actionsSubject.send(.dismiss)
+        case .proceed:
+            switch roomType {
+            case .draft:
+                createDraftRoom(mandatoryUserIDs: state.selectedUsers.map(\.id))
+            case .existingRoom(let roomProxy):
+                guard roomProxy.details.historySharingState != RoomHistorySharingState.hidden,
+                      !state.usersToConfirm.isEmpty,
+                      !state.isSkippable else {
+                    inviteUsers(state.selectedUsers.map(\.id), roomProxy: roomProxy)
+                    return
+                }
+                state.bindings.presentConfirmationDialog = true
+            }
+        case .removeUnknownUsers:
+            state.bindings.presentConfirmationDialog = false
+            state.selectedUsers.removeAll { user in
+                state.usersToConfirm.contains { $0.id == user.id }
+            }
+            state.usersToConfirm = []
+        case .confirmUnknownUsers:
+            state.bindings.presentConfirmationDialog = false
+            state.usersToConfirm = []
+            if case .existingRoom(let roomProxy) = roomType {
+                inviteUsers(state.selectedUsers.map(\.id), roomProxy: roomProxy)
+            }
+        case .toggleUser(let user):
+            toggleUser(user)
+        }
+    }
+    
+    // MARK: - Private
+    
+    private func toggleUser(_ user: UserProfile) {
+        guard !state.isInviteeMandatory(user) else { return }
+        
+        if state.selectedUsers.contains(user) {
+            state.selectedUsers.removeAll { $0.id == user.id }
+        } else {
+            state.selectedUsers.append(user)
+            withElementAnimation(.easeInOut) { state.bindings.selectedUsersPosition = user.id }
+            Task {
+                let identityUnknown = if case .success(let identity) = await self.clientProxy.userIdentity(for: user.id, fallBackToServer: false) {
+                    identity == nil
+                } else {
+                    true
+                }
+                if identityUnknown {
+                    // If we do not have the identity cached, we will prompt the user to confirm they meant to invite them.
+                    self.state.usersToConfirm.append(user)
+                }
+            }
+        }
+    }
+    
+    private func createDraftRoom(mandatoryUserIDs: [String]) {
+        showLoadingIndicator(title: L10n.commonCreatingRoom)
+        
+        Task {
+            defer { hideLoadingIndicator() }
+            
+            switch await clientProxy.createRoom(name: nil,
+                                                topic: nil,
+                                                accessType: .private,
+                                                isSpace: false,
+                                                userIDs: mandatoryUserIDs,
+                                                avatarURL: nil,
+                                                aliasLocalPart: nil) {
+            case .success(let roomID):
+                actionsSubject.send(.openRoom(roomID: roomID))
+            case .failure:
+                state.bindings.alertInfo = .init(id: .unknown,
+                                                 title: L10n.commonError,
+                                                 message: L10n.screenStartChatErrorStartingChat)
+            }
+        }
+    }
+    
+    private func inviteUsers(_ users: [String], roomProxy: JoinedRoomProxyProtocol) {
+        showLoadingIndicator(title: L10n.screenRoomDetailsInvitePeoplePreparing, message: L10n.screenRoomDetailsInvitePeopleDontClose)
+        
+        Task {
+            defer {
+                hideLoadingIndicator()
+                actionsSubject.send(.dismiss)
+            }
+            
+            let result: Result<Void, RoomProxyError> = await withTaskGroup(of: Result<Void, RoomProxyError>.self) { group in
+                for user in users {
+                    group.addTask {
+                        await roomProxy.invite(userID: user)
+                    }
+                }
+                
+                for await inviteResult in group where inviteResult.isFailure {
+                    return inviteResult
+                }
+                
+                return .success(())
+            }
+            
+            guard case .failure = result else {
+                return
+            }
+            
+            state.bindings.alertInfo = .init(id: .unknown,
+                                             title: L10n.commonUnableToInviteTitle,
+                                             message: L10n.commonUnableToInviteMessage)
+        }
+    }
+    
+    private func buildMembershipStateIfNeeded(members: [RoomMemberProxyProtocol]) {
+        showLoadingIndicator()
+        
+        Task.detached { [members] in
+            // accessing RoomMember's properties is very slow. We need to do it in a background thread.
+            let membershipState = members
+                .reduce(into: [String: MembershipState]()) { partialResult, member in
+                    partialResult[member.userID] = member.membership
+                }
+            
+            Task { @MainActor in
+                self.state.membershipState = membershipState
+                self.hideLoadingIndicator()
+            }
+        }
+    }
+    
+    @CancellableTask
+    private var fetchUsersTask: Task<Void, Never>?
+    
+    private func setupSubscriptions() {
+        context.$viewState
+            .map(\.bindings.searchQuery)
+            .debounceTextQueriesAndRemoveDuplicates()
+            .sink { [weak self] _ in
+                self?.fetchUsers()
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func fetchMembersIfNeeded() {
+        guard case .existingRoom(let roomProxy) = roomType else { return }
+        
+        Task {
+            showLoadingIndicator()
+            await roomProxy.updateMembers()
+            hideLoadingIndicator()
+        }
+        
+        roomProxy.membersPublisher
+            .filter { !$0.isEmpty }
+            .first()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] members in
+                self?.buildMembershipStateIfNeeded(members: members)
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func fetchUsers() {
+        guard searchQuery.count >= 3 else {
+            state.usersSection = .init(type: .suggestions, users: suggestedUsers)
+            return
+        }
+        
+        state.isSearching = true
+        
+        fetchUsersTask = Task {
+            let result = await userDiscoveryService.searchProfiles(with: searchQuery)
+            
+            guard !Task.isCancelled else { return }
+            
+            state.isSearching = false
+            
+            switch result {
+            case .success(let users):
+                state.usersSection = .init(type: .searchResult, users: users)
+            case .failure:
+                break
+            }
+        }
+    }
+    
+    private var searchQuery: String {
+        context.searchQuery
+    }
+    
+    private let userIndicatorID = UUID().uuidString
+    
+    private func showLoadingIndicator(title: String = L10n.commonLoading,
+                                      message: String? = nil) {
+        userIndicatorController.submitIndicator(UserIndicator(id: userIndicatorID,
+                                                              type: .modal,
+                                                              title: title,
+                                                              message: message,
+                                                              persistent: true),
+                                                delay: .milliseconds(200))
+    }
+    
+    private func hideLoadingIndicator() {
+        userIndicatorController.retractIndicatorWithId(userIndicatorID)
+    }
+}

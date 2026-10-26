@@ -1,0 +1,14 @@
+settings:
+  APP_DISPLAY_NAME: ANTINTWRK
+  PRODUCTION_APP_NAME: ANTINTWRK
+  APP_GROUP_IDENTIFIER: group.com.antintwrk.app
+  BASE_BUNDLE_IDENTIFIER: com.antintwrk.app
+  ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: "colors/accent-color"
+  DEVELOPMENT_TEAM: FBV226YGHR
+  IS_NIGHTLY_BUILD: false
+
+  # Optional configuration to load accounts from Element Classic.
+  CLASSIC_APP_GROUP_IDENTIFIER: group.com.antintwrk.app.classic
+  CLASSIC_APP_KEYCHAIN_SERVICE_IDENTIFIER: com.antintwrk.app.classic.encryption-manager-service
+  CLASSIC_APP_KEYCHAIN_ACCESS_GROUP_IDENTIFIER: "$(DEVELOPMENT_TEAM).com.antintwrk.app.classic.keychain.shared"
+  CLASSIC_APP_DEEP_LINK_URL: "antintwrk://open"

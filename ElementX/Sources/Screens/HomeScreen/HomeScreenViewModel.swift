@@ -1,0 +1,595 @@
+//
+// Copyright 2025 Element Creations Ltd.
+// Copyright 2022-2025 New Vector Ltd.
+//
+// SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial.
+// Please see LICENSE files in the repository root for full details.
+//
+
+import AnalyticsEvents
+import Combine
+import MatrixRustSDK
+import SwiftUI
+
+typealias HomeScreenViewModelType = StateStoreViewModel<HomeScreenViewState, HomeScreenViewAction>
+
+class HomeScreenViewModel: HomeScreenViewModelType, HomeScreenViewModelProtocol {
+    private let userSession: UserSessionProtocol
+    private let spaceFilterSubject: CurrentValueSubject<SpaceServiceFilter?, Never>
+    private let analyticsService: AnalyticsServiceProtocol
+    private let bugReportService: BugReportServiceProtocol
+    private let appSettings: AppSettings
+    private let notificationManager: NotificationManagerProtocol
+    private let userIndicatorController: UserIndicatorControllerProtocol
+    
+    private let roomSummaryProvider: RoomSummaryProviderProtocol?
+    
+    private var actionsSubject: PassthroughSubject<HomeScreenViewModelAction, Never> = .init()
+    var actions: AnyPublisher<HomeScreenViewModelAction, Never> {
+        actionsSubject.eraseToAnyPublisher()
+    }
+    
+    // swiftlint:disable:next function_body_length
+    init(userSession: UserSessionProtocol,
+         selectedRoomPublisher: CurrentValuePublisher<String?, Never>,
+         appSettings: AppSettings,
+         analyticsService: AnalyticsServiceProtocol,
+         bugReportService: BugReportServiceProtocol,
+         notificationManager: NotificationManagerProtocol,
+         userIndicatorController: UserIndicatorControllerProtocol) {
+        self.userSession = userSession
+        self.analyticsService = analyticsService
+        self.bugReportService = bugReportService
+        self.appSettings = appSettings
+        self.notificationManager = notificationManager
+        self.userIndicatorController = userIndicatorController
+        
+        spaceFilterSubject = CurrentValueSubject<SpaceServiceFilter?, Never>(nil)
+        
+        roomSummaryProvider = userSession.clientProxy.roomSummaryProvider
+        
+        super.init(initialViewState: .init(userProfile: userSession.clientProxy.userProfilePublisher.value,
+                                           bindings: .init(filtersState: .init(appSettings: appSettings))),
+                   mediaProvider: userSession.mediaProvider)
+        
+        if appSettings.globalSearchEnabled, #available(iOS 26.0, *) {
+            state.isRoomListSearchEnabled = false
+        }
+        
+        userSession.clientProxy.userProfilePublisher
+            .receive(on: DispatchQueue.main)
+            .weakAssign(to: \.state.userProfile, on: self)
+            .store(in: &cancellables)
+        
+        userSession.sessionSecurityStatePublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] securityState in
+                guard let self else { return }
+                
+                switch securityState.recoveryState {
+                case .disabled:
+                    if !state.securityBannerMode.isDismissed {
+                        state.securityBannerMode = .show(.setUpRecovery)
+                    }
+                case .incomplete:
+                    state.securityBannerMode = .show(.recoveryOutOfSync)
+                default:
+                    state.securityBannerMode = .none
+                }
+            }
+            .store(in: &cancellables)
+        
+        userSession.sessionSecurityStatePublisher
+            .receive(on: DispatchQueue.main)
+            .filter { state in
+                state.verificationState != .unknown
+                    && state.recoveryState != .settingUp
+                    && state.recoveryState != .unknown
+            }
+            .sink { [weak self] state in
+                guard let self else { return }
+                
+                self.analyticsService.updateUserProperties(AnalyticsEvent.newVerificationStateUserProperty(verificationState: state.verificationState, recoveryState: state.recoveryState))
+                self.analyticsService.trackSessionSecurityState(state)
+            }
+            .store(in: &cancellables)
+        
+        userSession.clientProxy.spaceService.spaceFilterPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] filters in
+                guard let self else { return }
+                
+                state.shouldShowSpaceFilters = !filters.isEmpty
+                
+                if let selectedSpaceFilter = spaceFilterSubject.value,
+                   !filters.contains(selectedSpaceFilter) {
+                    // Clear the spaces filter if the space has been left.
+                    spaceFilterSubject.send(nil)
+                }
+            }
+            .store(in: &cancellables)
+        
+        selectedRoomPublisher
+            .weakAssign(to: \.state.selectedRoomID, on: self)
+            .store(in: &cancellables)
+        
+        appSettings.roomListActivityVisibilityPublisher
+            .sink { [weak self] value in
+                self?.state.roomListActivityVisibility = value
+                self?.updateRooms()
+            }
+            .store(in: &cancellables)
+        
+        appSettings.roomListNotificationCountEnabledPublisher
+            .weakAssign(to: \.state.roomListNotificationCountEnabled, on: self)
+            .store(in: &cancellables)
+        
+        appSettings.seenInvitesPublisher
+            .removeDuplicates()
+            .sink { [weak self] _ in
+                self?.updateRooms()
+            }
+            .store(in: &cancellables)
+        
+        appSettings.hasSeenNewSoundBannerPublisher
+            .sink { [weak self] hasSeenNewSoundBanner in
+                self?.state.shouldShowNewSoundBanner = !hasSeenNewSoundBanner
+            }
+            .store(in: &cancellables)
+        
+        userSession.clientProxy.hideInviteAvatarsPublisher
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .weakAssign(to: \.state.hideInviteAvatars, on: self)
+            .store(in: &cancellables)
+        
+        spaceFilterSubject
+            .receive(on: DispatchQueue.main)
+            .weakAssign(to: \.state.selectedSpaceFilter, on: self)
+            .store(in: &cancellables)
+        
+        bugReportService.lastCrashEventIDSubject
+            .compactMap { $0 }
+            .first()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.presentCrashedLastRunAlert()
+            }
+            .store(in: &cancellables)
+        
+        Task {
+            state.reportRoomEnabled = await userSession.clientProxy.isReportRoomSupported
+        }
+        
+        let isSearchFieldFocused = context.$viewState.map(\.bindings.isSearchFieldFocused)
+        let searchQuery = context.$viewState.map(\.bindings.searchQuery)
+        let activeFilters = context.$viewState.map(\.bindings.filtersState.activeFilters)
+        isSearchFieldFocused
+            .combineLatest(searchQuery, activeFilters, spaceFilterSubject)
+            .removeDuplicates { $0 == $1 }
+            .sink { [weak self] isSearchFieldFocused, _, _, _ in
+                guard let self else { return }
+                // isSearchFieldFocused` is sometimes turning to true after cancelling the search. So to be extra sure we are updating the values correctly we read them directly in the next run loop, and we add a small delay if the value has changed
+                let delay = isSearchFieldFocused == self.context.viewState.bindings.isSearchFieldFocused ? 0.0 : 0.05
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    self.updateFilter()
+                }
+            }
+            .store(in: &cancellables)
+        
+        NotificationCenter.default.publisher(for: AntintwrkHiddenChats.changed)
+            .receive(on: DispatchQueue.main).sink { [weak self] notification in
+                guard let self, notification.object as? String == userSession.clientProxy.userID else { return }
+                updateRooms()
+            }.store(in: &cancellables)
+        setupRoomListSubscriptions()
+        
+        updateRooms()
+        
+        if let roomSummaryProvider {
+            updateRoomListMode(with: roomSummaryProvider.statePublisher.value,
+                               hasRooms: !roomSummaryProvider.roomListPublisher.value.isEmpty)
+        }
+    }
+    
+    // MARK: - Public
+    
+    override func process(viewAction: HomeScreenViewAction) {
+        switch viewAction {
+        case .selectRoom(let roomIdentifier):
+            actionsSubject.send(.presentRoom(roomIdentifier: roomIdentifier))
+        case .detachRoom(let roomIdentifier):
+            actionsSubject.send(.detachRoom(roomIdentifier: roomIdentifier))
+        case .showRoomDetails(let roomIdentifier):
+            actionsSubject.send(.presentRoomDetails(roomIdentifier: roomIdentifier))
+        case .leaveRoom(let roomIdentifier):
+            if let summary = roomSummaryProvider?.roomListPublisher.value.first(where: { $0.id == roomIdentifier }), summary.isDirect {
+                AntintwrkHiddenChats(actor: userSession.clientProxy.userID).hide(roomIdentifier, lastMessage: summary.lastMessageDate)
+                updateRooms()
+                return
+            }
+            startLeaveRoomProcess(roomID: roomIdentifier)
+        case .confirmLeaveRoom(let roomIdentifier):
+            guard roomSummaryProvider?.roomListPublisher.value.first(where: { $0.id == roomIdentifier })?.isDirect != true else { return }
+            Task { await leaveRoom(roomID: roomIdentifier) }
+        case .reportRoom(let roomIdentifier):
+            actionsSubject.send(.presentReportRoom(roomIdentifier: roomIdentifier))
+        case .showSettings:
+            actionsSubject.send(.presentSettingsScreen)
+        case .setupRecovery:
+            actionsSubject.send(.presentSecureBackupSettings)
+        case .confirmRecoveryKey:
+            actionsSubject.send(.presentRecoveryKeyScreen)
+        case .resetEncryption:
+            actionsSubject.send(.presentEncryptionResetScreen)
+        case .skipRecoveryKeyConfirmation:
+            state.securityBannerMode = .dismissed
+        case .dismissNewSoundBanner:
+            appSettings.hasSeenNewSoundBanner = true
+        case .updateVisibleItemRange(let range):
+            roomSummaryProvider?.updateVisibleRange(range)
+        case .startChat:
+            actionsSubject.send(.presentStartChatScreen)
+        case .spaceFilters:
+            if spaceFilterSubject.value != nil {
+                spaceFilterSubject.send(nil)
+            } else {
+                state.bindings.spaceFiltersViewModel = ChatsSpaceFiltersScreenViewModel(spaceService: userSession.clientProxy.spaceService,
+                                                                                        mediaProvider: userSession.mediaProvider)
+                
+                state.bindings.spaceFiltersViewModel?.actionsPublisher.sink { [weak self] action in
+                    guard let self else { return }
+                    
+                    switch action {
+                    case .confirm(let spaceServiceFilter):
+                        spaceFilterSubject.send(spaceServiceFilter)
+                        state.bindings.spaceFiltersViewModel = nil
+                    case .cancel:
+                        state.bindings.spaceFiltersViewModel = nil
+                    }
+                }
+                .store(in: &cancellables)
+            }
+        case .markRoomAsUnread(let roomIdentifier):
+            Task {
+                guard case let .joined(roomProxy) = await userSession.clientProxy.roomForIdentifier(roomIdentifier) else {
+                    MXLog.error("Failed retrieving room for identifier: \(roomIdentifier)")
+                    return
+                }
+                
+                switch await roomProxy.flagAsUnread(true) {
+                case .success:
+                    analyticsService.trackInteraction(name: .MobileRoomListRoomContextMenuUnreadToggle)
+                case .failure(let error):
+                    MXLog.error("Failed marking room \(roomIdentifier) as unread with error: \(error)")
+                }
+            }
+        case .markRoomAsRead(let roomIdentifier):
+            Task {
+                guard case let .joined(roomProxy) = await userSession.clientProxy.roomForIdentifier(roomIdentifier) else {
+                    MXLog.error("Failed retrieving room for identifier: \(roomIdentifier)")
+                    return
+                }
+                
+                switch await roomProxy.flagAsUnread(false) {
+                case .success:
+                    analyticsService.trackInteraction(name: .MobileRoomListRoomContextMenuUnreadToggle)
+                    
+                    if case .failure(let error) = await roomProxy.markAsRead(receiptType: appSettings.sharePresence ? .read : .readPrivate) {
+                        MXLog.error("Failed marking room \(roomIdentifier) as read with error: \(error)")
+                    }
+                case .failure(let error):
+                    MXLog.error("Failed flagging room \(roomIdentifier) as read with error: \(error)")
+                }
+            }
+        case .markRoomAsFavourite(let roomIdentifier, let isFavourite):
+            Task {
+                await markRoomAsFavourite(roomIdentifier, isFavourite: isFavourite)
+            }
+        case .acceptInvite(let roomIdentifier):
+            Task {
+                await acceptInvite(roomID: roomIdentifier)
+            }
+        case .declineInvite(let roomIdentifier):
+            Task { await showDeclineInviteConfirmationAlert(roomID: roomIdentifier) }
+        }
+    }
+    
+    // perphery: ignore - used in release mode
+    func presentCrashedLastRunAlert() {
+        // Delay setting the alert otherwise it automatically gets dismissed. Same as the force logout one.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.state.bindings.alertInfo = AlertInfo(id: UUID(),
+                                                      title: L10n.crashDetectionDialogContent(InfoPlistReader.main.bundleDisplayName),
+                                                      primaryButton: .init(title: L10n.actionNo, action: nil),
+                                                      secondaryButton: .init(title: L10n.actionYes) { [weak self] in
+                                                          self?.actionsSubject.send(.presentFeedbackScreen)
+                                                      })
+        }
+    }
+    
+    // MARK: - Private
+    
+    private func updateFilter() {
+        if state.shouldHideRoomList {
+            roomSummaryProvider?.setFilter(.excludeAll)
+        } else {
+            if state.bindings.isSearchFieldFocused {
+                roomSummaryProvider?.setFilter(.search(query: state.bindings.searchQuery))
+            } else {
+                if let spaceFilter = spaceFilterSubject.value {
+                    roomSummaryProvider?.setFilter(.rooms(roomsIDs: spaceFilter.descendants,
+                                                          filters: state.bindings.filtersState.activeFilters.set))
+                } else {
+                    roomSummaryProvider?.setFilter(.all(filters: state.bindings.filtersState.activeFilters.set))
+                }
+            }
+        }
+    }
+    
+    private func setupRoomListSubscriptions() {
+        guard let roomSummaryProvider else {
+            MXLog.error("Room summary provider unavailable")
+            return
+        }
+        
+        // Combined so that the mode and the rooms are always updated from the same pair of
+        // values: the state can report loaded before the first summaries have published and
+        // flipping to .rooms then would flash an empty list.
+        roomSummaryProvider.statePublisher
+            .combineLatest(roomSummaryProvider.roomListPublisher)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state, rooms in
+                guard let self else { return }
+                
+                updateRooms()
+                updateRoomListMode(with: state, hasRooms: !rooms.isEmpty)
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func updateRoomListMode(with roomSummaryProviderState: RoomSummaryProviderState, hasRooms: Bool) {
+        let roomListMode: HomeScreenRoomListMode = if !roomSummaryProviderState.isLoaded {
+            .skeletons // Still loading.
+        } else if roomSummaryProviderState.totalNumberOfRooms == 0 {
+            .empty // Loaded, there are no rooms at all.
+        } else if hasRooms {
+            .rooms // Loaded and the summaries have published.
+        } else if state.roomListMode == .skeletons {
+            .skeletons // Loaded but nothing published yet, flipping to .rooms would flash an empty list.
+        } else {
+            .rooms
+        }
+        
+        guard roomListMode != state.roomListMode else {
+            return
+        }
+        
+        if roomListMode == .rooms, state.roomListMode == .skeletons {
+            analyticsService.signpost.finishTransaction(.cachedRoomList)
+        }
+        
+        state.roomListMode = roomListMode
+        
+        MXLog.info("Received room summary provider update, setting view room list mode to \"\(state.roomListMode)\"")
+        // Delay user profile detail loading until after the initial room list loads
+        if roomListMode == .rooms {
+            Task {
+                await self.userSession.clientProxy.loadUserProfileIfNeeded()
+            }
+        }
+    }
+    
+    private func updateRooms() {
+        guard let roomSummaryProvider else {
+            MXLog.error("Room summary provider unavailable")
+            return
+        }
+        
+        var rooms = [HomeScreenRoom]()
+        let seenInvites = appSettings.seenInvites
+        
+        for summary in roomSummaryProvider.roomListPublisher.value {
+            if summary.isDirect, AntintwrkHiddenChats(actor: userSession.clientProxy.userID).isHidden(summary.id, lastMessage: summary.lastMessageDate) {
+                continue
+            }
+            let room = HomeScreenRoom(summary: summary,
+                                      roomListActivityVisibility: appSettings.roomListActivityVisibility,
+                                      seenInvites: seenInvites)
+            rooms.append(room)
+        }
+        
+        state.rooms = rooms
+    }
+    
+    private func markRoomAsFavourite(_ roomID: String, isFavourite: Bool) async {
+        guard case let .joined(roomProxy) = await userSession.clientProxy.roomForIdentifier(roomID) else {
+            MXLog.error("Failed retrieving room for identifier: \(roomID)")
+            return
+        }
+        
+        switch await roomProxy.flagAsFavourite(isFavourite) {
+        case .success:
+            analyticsService.trackInteraction(name: .MobileRoomListRoomContextMenuFavouriteToggle)
+        case .failure(let error):
+            MXLog.error("Failed marking room \(roomID) as favourite: \(isFavourite) with error: \(error)")
+        }
+    }
+    
+    private static let leaveRoomLoadingID = "LeaveRoomLoading"
+    
+    private func startLeaveRoomProcess(roomID: String) {
+        Task {
+            defer {
+                userIndicatorController.retractIndicatorWithId(Self.leaveRoomLoadingID)
+            }
+            userIndicatorController.submitIndicator(UserIndicator(id: Self.leaveRoomLoadingID, type: .modal, title: L10n.commonLoading, persistent: true))
+            
+            guard case let .joined(roomProxy) = await userSession.clientProxy.roomForIdentifier(roomID) else {
+                state.bindings.alertInfo = AlertInfo(id: UUID(), title: L10n.errorUnknown)
+                return
+            }
+            
+            guard roomProxy.infoPublisher.value.joinedMembersCount > 1 else {
+                state.bindings.leaveRoomAlertItem = LeaveRoomAlertItem(roomID: roomID,
+                                                                       isDM: roomProxy.infoPublisher.value.isDM,
+                                                                       state: roomProxy.infoPublisher.value.isPrivate ?? true ? .empty : .public)
+                return
+            }
+            
+            if !roomProxy.infoPublisher.value.isDM {
+                if case let .success(ownMember) = await roomProxy.getMember(userID: roomProxy.ownUserID),
+                   ownMember.role.isOwner {
+                    await roomProxy.updateMembers()
+                    var isLastOwner = true
+                    for member in roomProxy.membersPublisher.value where member.userID != roomProxy.ownUserID && member.membership == .join {
+                        if member.role.isOwner {
+                            isLastOwner = false
+                            break
+                        }
+                    }
+                    
+                    if isLastOwner {
+                        state.bindings.alertInfo = .init(id: UUID(),
+                                                         title: L10n.leaveRoomAlertSelectNewOwnerTitle,
+                                                         message: L10n.leaveRoomAlertSelectNewOwnerSubtitle,
+                                                         primaryButton: .init(title: L10n.actionCancel, role: .cancel, action: nil),
+                                                         secondaryButton: .init(title: L10n.leaveRoomAlertSelectNewOwnerAction, role: .destructive) { [weak self] in
+                                                             self?.actionsSubject.send(.transferOwnership(roomIdentifier: roomID))
+                                                         })
+                        return
+                    }
+                }
+            }
+            
+            state.bindings.leaveRoomAlertItem = LeaveRoomAlertItem(roomID: roomID, isDM: roomProxy.infoPublisher.value.isDM, state: roomProxy.infoPublisher.value.isPrivate ?? true ? .private : .public)
+        }
+    }
+    
+    private func leaveRoom(roomID: String) async {
+        defer {
+            userIndicatorController.retractIndicatorWithId(Self.leaveRoomLoadingID)
+        }
+        userIndicatorController.submitIndicator(UserIndicator(id: Self.leaveRoomLoadingID, type: .modal, title: L10n.commonLeavingRoom, persistent: true))
+        
+        guard case let .joined(roomProxy) = await userSession.clientProxy.roomForIdentifier(roomID),
+              case .success = await roomProxy.leaveRoom() else {
+            state.bindings.alertInfo = AlertInfo(id: UUID(), title: L10n.errorUnknown)
+            return
+        }
+        
+        userIndicatorController.submitIndicator(UserIndicator(id: UUID().uuidString,
+                                                              type: .toast,
+                                                              title: L10n.commonCurrentUserLeftRoom,
+                                                              icon: \.check))
+        actionsSubject.send(.roomLeft(roomIdentifier: roomID))
+    }
+    
+    // MARK: Invites
+    
+    private func acceptInvite(roomID: String) async {
+        defer {
+            userIndicatorController.retractIndicatorWithId(roomID)
+        }
+        
+        userIndicatorController.submitIndicator(UserIndicator(id: roomID, type: .modal, title: L10n.commonLoading, persistent: true))
+        
+        guard case let .invited(roomProxy) = await userSession.clientProxy.roomForIdentifier(roomID) else {
+            displayError()
+            return
+        }
+        
+        switch await userSession.clientProxy.joinRoom(roomID, via: []) {
+        case .success:
+            await finishAcceptInvite(roomProxy: roomProxy)
+        case .failure(let error):
+            switch error {
+            case .invalidInvite:
+                displayError(title: L10n.dialogTitleError, message: L10n.errorInvalidInvite)
+            default:
+                displayError()
+            }
+        }
+    }
+    
+    private func finishAcceptInvite(roomProxy: InvitedRoomProxyProtocol) async {
+        if roomProxy.info.isSpace {
+            let spaceService = userSession.clientProxy.spaceService
+            
+            switch await spaceService.spaceRoomList(spaceID: roomProxy.id) {
+            case .success(let spaceRoomListProxy):
+                actionsSubject.send(.presentSpace(spaceRoomListProxy))
+            case .failure(let error):
+                MXLog.error("Failed to get the space room list after accepting invite: \(error)")
+                displayError()
+                return
+            }
+        } else {
+            actionsSubject.send(.presentRoom(roomIdentifier: roomProxy.id))
+        }
+        
+        analyticsService.trackJoinedRoom(isDM: roomProxy.info.isDirect,
+                                         isSpace: roomProxy.info.isSpace,
+                                         activeMemberCount: UInt(roomProxy.info.activeMembersCount))
+        appSettings.seenInvites.remove(roomProxy.id)
+    }
+    
+    private func showDeclineInviteConfirmationAlert(roomID: String) async {
+        guard let room = state.rooms.first(where: { $0.id == roomID }) else {
+            displayError()
+            return
+        }
+        
+        let roomPlaceholder = room.isDirect ? (room.inviter?.displayName ?? room.name) : room.name
+        let title = room.isDirect ? L10n.screenInvitesDeclineDirectChatTitle : L10n.screenInvitesDeclineChatTitle
+        let message = room.isDirect ? L10n.screenInvitesDeclineDirectChatMessage(roomPlaceholder) : L10n.screenInvitesDeclineChatMessage(roomPlaceholder)
+        
+        if await userSession.clientProxy.isReportRoomSupported, let userID = room.inviter?.id {
+            state.bindings.alertInfo = .init(id: UUID(),
+                                             title: title,
+                                             message: message,
+                                             primaryButton: .init(title: L10n.actionCancel, role: .cancel, action: nil),
+                                             secondaryButton: .init(title: L10n.actionDeclineAndBlock, role: .destructive) { [weak self] in self?.declineAndBlockInvite(userID: userID, roomID: roomID) },
+                                             verticalButtons: [.init(title: L10n.actionDecline) { [weak self] in Task { await self?.declineInvite(roomID: room.id) } }])
+        } else {
+            state.bindings.alertInfo = .init(id: UUID(),
+                                             title: title,
+                                             message: message,
+                                             primaryButton: .init(title: L10n.actionCancel, role: .cancel, action: nil),
+                                             secondaryButton: .init(title: L10n.actionDecline, role: .destructive) { [weak self] in Task { await self?.declineInvite(roomID: room.id) } })
+        }
+    }
+    
+    private func declineAndBlockInvite(userID: String, roomID: String) {
+        actionsSubject.send(.presentDeclineAndBlock(userID: userID, roomID: roomID))
+    }
+    
+    private func declineInvite(roomID: String) async {
+        defer {
+            userIndicatorController.retractIndicatorWithId(roomID)
+        }
+        
+        userIndicatorController.submitIndicator(UserIndicator(id: roomID, type: .modal, title: L10n.commonLoading, persistent: true))
+        
+        guard case let .invited(roomProxy) = await userSession.clientProxy.roomForIdentifier(roomID) else {
+            displayError()
+            return
+        }
+        
+        let result = await roomProxy.rejectInvitation()
+        
+        switch result {
+        case .success:
+            await notificationManager.removeDeliveredMessageNotifications(for: roomID) // Normally handled by the room flow, but that's never presented in this case.
+            appSettings.seenInvites.remove(roomID)
+        case .failure:
+            displayError()
+        }
+    }
+    
+    private func displayError(title: String? = nil, message: String? = nil) {
+        state.bindings.alertInfo = .init(id: UUID(),
+                                         title: title ?? L10n.commonError,
+                                         message: message ?? L10n.errorUnknown)
+    }
+}

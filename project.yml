@@ -1,0 +1,186 @@
+---
+name: ElementX
+attributes:
+  ORGANIZATIONNAME: Element
+  LastUpgradeCheck: "1620"
+  
+fileGroups:
+- project.yml
+- app.yml
+
+options:
+  groupSortPosition: bottom
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: '18.5'
+    macOS: '14.5'
+  groupOrdering:
+  - order:
+    - ElementX
+    - NSE
+    - ShareExtension
+    - UnitTests
+    - PreviewTests
+    - UITests
+    - AccessibilityTests
+    - IntegrationTests
+    - Components
+    - Tools
+  - pattern: ElementX
+    order:
+    - Sources
+    - Resources
+    - SupportingFiles
+  - pattern: Sources
+    order:
+    - Application
+    - UserSession
+    - Services
+    - FlowCoordinators
+    - Screens
+    - Other
+    - UITests
+    - AccessibilityTests
+  fileTypes:
+    icon:
+      file: true # https://github.com/yonaskolb/XcodeGen/issues/1556
+  postGenCommand: cd Tools/XcodeGen && sh postGenCommand.sh
+
+settings:
+  CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED: true
+  ENABLE_BITCODE: false
+  APP_NAME: ElementX
+  KEYCHAIN_ACCESS_GROUP_IDENTIFIER: "$(DEVELOPMENT_TEAM).$(BASE_BUNDLE_IDENTIFIER)"
+  MARKETING_VERSION: 1.0.0
+  CURRENT_PROJECT_VERSION: 1
+  SUPPORTS_MACCATALYST: false
+  SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: true
+  TARGETED_DEVICE_FAMILY: "1,2"
+  ARCHS: arm64
+
+include:
+- path: app.yml
+- path: ElementX/SupportingFiles/target.yml
+- path: NSE/SupportingFiles/target.yml
+- path: ShareExtension/SupportingFiles/target.yml
+- path: UnitTests/SupportingFiles/target.yml
+- path: PreviewTests/SupportingFiles/target.yml
+- path: UITests/SupportingFiles/target.yml
+- path: IntegrationTests/SupportingFiles/target.yml
+- path: AccessibilityTests/SupportingFiles/target.yml
+- path: Components/MapLibre/MapLibreInterface/SupportingFiles/target.yml
+- path: Components/MapLibre/MapLibreShim/SupportingFiles/target.yml
+- path: Components/SDKMocks/SupportingFiles/target.yml
+# - path: MyAppVariant/override.yml
+
+packages:
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    exactVersion: 9.0.0
+  # Element/Matrix dependencies
+  MatrixRustSDK:
+    url: https://github.com/element-hq/matrix-rust-components-swift
+    exactVersion: 26.09.22
+    # path: ../matrix-rust-sdk
+  Compound:
+    path: compound-ios
+  ElementCall:
+    url: https://github.com/element-hq/element-call-ios
+    exactVersion: 0.1.0-rc.8
+    # path: ../element-call-ios
+  BuildExtensions:
+    path: Components/BuildExtensions
+  AnalyticsEvents:
+    url: https://github.com/matrix-org/matrix-analytics-events
+    exactVersion: 0.37.0
+    # path: ../matrix-analytics-events
+  EmbeddedElementCall:
+    url: https://github.com/element-hq/element-call-swift
+    exactVersion: 0.25.0
+  Emojibase:
+    url: https://github.com/matrix-org/emojibase-bindings
+    revision: 60bc01f2e3b31445dc723f5af1a777b63d18e6c2 # pinned due to https://github.com/matrix-org/emojibase-bindings/issues/59
+    # exactVersion: 1.5.0
+    # path: ../emojibase-bindings
+  SwiftOGG:
+    url: https://github.com/element-hq/swift-ogg
+    exactVersion: 0.0.4
+    # path: ../swift-ogg
+  WysiwygComposer:
+    url: https://github.com/element-hq/matrix-rich-text-editor-swift
+    exactVersion: 2.42.0
+    # path: ../matrix-rich-text-editor/platforms/ios/lib/WysiwygComposer
+  
+  # External dependencies
+  Algorithms:
+    url: https://github.com/apple/swift-algorithms
+    exactVersion: 1.2.1
+  AsyncAlgorithms:
+    url: https://github.com/apple/swift-async-algorithms
+    exactVersion: 1.1.5
+  Collections:
+    url: https://github.com/apple/swift-collections
+    exactVersion: 1.6.0
+  DeviceKit:
+    url: https://github.com/devicekit/DeviceKit
+    exactVersion: 5.8.0
+  DSWaveformImage:
+    url: https://github.com/dmrschmidt/DSWaveformImage
+    exactVersion: 14.5.0
+  Dynamic:
+    url: https://github.com/mhdhejazi/Dynamic
+    exactVersion: 1.2
+  GZIP:
+    url: https://github.com/nicklockwood/GZIP
+    exactVersion: 1.3.2
+  KeychainAccess:
+    url: https://github.com/kishikawakatsumi/KeychainAccess
+    exactVersion: 4.2.2
+  Kingfisher:
+    url: https://github.com/onevcat/Kingfisher
+    exactVersion: 8.12.0
+  KZFileWatchers:
+    url: https://github.com/krzysztofzablocki/KZFileWatchers
+    exactVersion: 1.2.0
+  LoremSwiftum:
+    url: https://github.com/lukaskubanek/LoremSwiftum
+    exactVersion: 2.2.3
+  LRUCache:
+    url: https://github.com/nicklockwood/LRUCache
+    exactVersion: 1.3.0
+  Mantis:
+    url: https://github.com/guoyingtao/Mantis
+    exactVersion: 3.1.0
+  MapLibre:
+    url: https://github.com/maplibre/maplibre-gl-native-distribution
+    exactVersion: 6.29.0
+  PostHog:
+    url: https://github.com/PostHog/posthog-ios
+    exactVersion: 3.71.0
+  Sentry:
+    url: https://github.com/getsentry/sentry-cocoa
+    exactVersion: 9.26.1
+  SnapshotTesting:
+    url: https://github.com/pointfreeco/swift-snapshot-testing
+    exactVersion: 1.19.4
+  SwiftFlow:
+    url: https://github.com/tevelee/SwiftUI-Flow.git
+    exactVersion: 3.5.1
+  SwiftSoup:
+    url: https://github.com/scinfu/SwiftSoup.git
+    exactVersion: 2.13.9
+  SwiftState:
+    url: https://github.com/ReactKit/SwiftState
+    exactVersion: 6.0.1
+  Version:
+    url: https://github.com/mxcl/Version
+    exactVersion: 2.2.1
+
+aggregateTargets:
+  Periphery:
+    buildScripts:
+    - name: Scan
+      script: |
+        export PATH="$PATH:/opt/homebrew/bin"
+        periphery scan --format xcode
+      basedOnDependencyAnalysis: false
