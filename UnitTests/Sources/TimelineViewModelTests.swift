@@ -548,7 +548,7 @@ final class TimelineViewModelTests {
         
         viewModel.process(viewAction: .itemSendInfoTapped(itemID: items[0].id))
         
-        #expect(viewModel.state.bindings.alertInfo?.title == "Encrypted by a previously-verified user.")
+        #expect(viewModel.state.bindings.alertInfo?.title == L10n.cryptoEventAuthenticityPreviouslyVerified)
     }
     
     @Test
@@ -562,7 +562,7 @@ final class TimelineViewModelTests {
         
         viewModel.process(viewAction: .itemSendInfoTapped(itemID: items[0].id))
         
-        #expect(viewModel.state.bindings.alertInfo?.title == "alice (@alice:matrix.org) shared this message since you were not in the room when it was sent.")
+        #expect(viewModel.state.bindings.alertInfo?.title == L10n.cryptoEventKeyForwardedKnownProfileDialogContent("alice", "@alice:matrix.org"))
     }
     
     @Test

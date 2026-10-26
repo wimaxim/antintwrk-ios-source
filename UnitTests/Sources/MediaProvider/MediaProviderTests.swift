@@ -206,6 +206,43 @@ struct MediaProviderTests {
         }
     }
     
+    @Test
+    func imageAndComposerTeardownInsideTaskLocalScope() async throws {
+        let scene = try #require(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let image = try #require(UIImage(systemName: "person.crop.circle"))
+        let provider = MediaProviderMock(.init())
+        provider.imageFromSourceSizeClosure = { _, _ in image }
+        provider.loadImageRetryingOnReconnectionSizeClosure = { _, _ in Task { image } }
+        let composer = ComposerToolbarViewModel.mock()
+        for _ in 0..<3 {
+            try await ImageViewTeardownScope.$marker.withValue("image-teardown") {
+                var signposter: Signposter? = Signposter()
+                weak var releasedSignposter = signposter
+                signposter = nil
+                #expect(releasedSignposter == nil)
+                var controller: UIHostingController<AnyView>? = UIHostingController(rootView: AnyView(VStack {
+                    LoadableImage(url: .mockMXCAvatar, mediaType: .avatar, mediaProvider: provider) { Color.clear }.frame(width: 64, height: 64)
+                    ComposerToolbar(context: composer.context)
+                }))
+                weak var releasedController = controller
+                var window: UIWindow? = UIWindow(windowScene: scene)
+                window?.rootViewController = controller
+                window?.makeKeyAndVisible()
+                controller?.view.layoutIfNeeded()
+                try await Task.sleep(for: .milliseconds(100))
+                window?.isHidden = true
+                window?.rootViewController = nil
+                window = nil
+                controller = nil
+                let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+                while releasedController != nil, ContinuousClock.now < deadline {
+                    try await Task.sleep(for: .milliseconds(50))
+                }
+                #expect(releasedController == nil)
+            }
+        }
+    }
+    
     private func loadTestImage() throws -> UIImage {
         guard let path = Bundle(for: UnitTestsAppCoordinator.self).path(forResource: "test_image", ofType: "png"),
               let image = UIImage(contentsOfFile: path) else {
@@ -217,4 +254,8 @@ struct MediaProviderTests {
 
 private enum MediaProviderTestsError: Error {
     case error
+}
+
+private enum ImageViewTeardownScope {
+    @TaskLocal static var marker: String?
 }

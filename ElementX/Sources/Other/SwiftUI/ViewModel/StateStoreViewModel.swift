@@ -35,6 +35,9 @@ class StateStoreViewModel<State: BindableState, ViewAction> {
         context.viewModel = self
     }
     
+    // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2 and earlier (swiftlang/swift#88036).
+    nonisolated deinit { }
+    
     /// Override to handles incoming `ViewAction`s from the `ViewModel`.
     /// - Parameter viewAction: The `ViewAction` to be processed in `ViewModel` implementation.
     func process(viewAction: ViewAction) {
@@ -88,5 +91,8 @@ class StateStoreViewModel<State: BindableState, ViewAction> {
             self.mediaProvider = mediaProvider
             self.contentScannerService = contentScannerService
         }
+        
+        // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2 and earlier (swiftlang/swift#88036).
+        nonisolated deinit { }
     }
 }

@@ -194,6 +194,9 @@ class HomeScreenViewModel: HomeScreenViewModelType, HomeScreenViewModelProtocol 
     
     // MARK: - Public
     
+    // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2 and earlier (swiftlang/swift#88036).
+    nonisolated deinit { }
+    
     override func process(viewAction: HomeScreenViewAction) {
         switch viewAction {
         case .selectRoom(let roomIdentifier):

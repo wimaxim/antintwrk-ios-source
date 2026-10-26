@@ -288,6 +288,9 @@ private class ContentLoader: ObservableObject {
         self.mediaProvider = mediaProvider
     }
     
+    // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2 and earlier (swiftlang/swift#88036).
+    nonisolated deinit { }
+    
     func load() async {
         if isGIF {
             if case let .success(data) = await mediaProvider?.loadImageDataFromSource(mediaSource) {

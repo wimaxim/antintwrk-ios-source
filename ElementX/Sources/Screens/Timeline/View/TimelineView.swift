@@ -113,6 +113,9 @@ struct TimelineViewRepresentable: UIViewControllerRepresentable {
             context = viewModelContext
         }
         
+        // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2 and earlier (swiftlang/swift#88036).
+        nonisolated deinit { }
+        
         /// Updates the specified table view's properties from the current view state.
         func update(tableViewController: TimelineTableViewController) {
             if tableViewController.isSwitchingTimelines != context.viewState.timelineState.isSwitchingTimelines {

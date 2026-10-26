@@ -20,6 +20,7 @@ final nonisolated class AntintwrkStoreWebIntegrationTests: XCTestCase {
         let email = try XCTUnwrap(fields["email"])
         let password = try XCTUnwrap(fields["password"])
         let model = AntintwrkAppModel()
+        model.language = "en" // The refund-disclosure assertion below checks the English page.
         let client = model.client
         let admission = try await client.login(email: email, password: password, language: "en")
         XCTAssertEqual(admission.stage, .authenticated)

@@ -266,6 +266,9 @@ struct ComposerToolbar: View {
     }
     
     private class ItemProviderHelper: WysiwygItemProviderHelper {
+        // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2 and earlier (swiftlang/swift#88036).
+        nonisolated deinit { }
+        
         func isPasteSupported(for itemProvider: NSItemProvider) -> Bool {
             itemProvider.isSupportedForPasteOrDrop
         }

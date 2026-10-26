@@ -11,6 +11,9 @@ import LinkPresentation
 class LinkMetadataProvider: LinkMetadataProviderProtocol {
     private(set) var metadataItems = [URL: LinkMetadataProviderItem]()
     
+    // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2 and earlier (swiftlang/swift#88036).
+    nonisolated deinit { }
+    
     func fetchMetadataFor(url: URL) async -> Result<LinkMetadataProviderItem, Error> {
         if let item = metadataItems[url] {
             return .success(item)

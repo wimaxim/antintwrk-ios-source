@@ -54,6 +54,9 @@ class Signposter {
         case homeserver
     }
     
+    // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2 and earlier (swiftlang/swift#88036).
+    nonisolated deinit { }
+    
     // MARK: - Transactions
     
     func startTransaction(_ transactionName: TransactionName, operation: String = "ux", tags: [TagName: String] = [:]) {

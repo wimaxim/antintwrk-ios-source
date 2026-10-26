@@ -36,6 +36,9 @@ class TypingMembersObservableObject: ObservableObject {
     init(members: [String]) {
         self.members = members
     }
+    
+    // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2 and earlier (swiftlang/swift#88036).
+    nonisolated deinit { }
 }
 
 /// A table view controller that displays the timeline of a room.

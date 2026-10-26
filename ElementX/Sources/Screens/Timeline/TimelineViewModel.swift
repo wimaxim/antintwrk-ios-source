@@ -154,6 +154,9 @@ class TimelineViewModel: TimelineViewModelType, TimelineViewModelProtocol {
     
     // MARK: - Public
     
+    // Avoid the synthesized isolated-deinit runtime crash on iOS 26.2 and earlier (swiftlang/swift#88036).
+    nonisolated deinit { }
+    
     override func process(viewAction: TimelineViewAction) {
         switch viewAction {
         case .itemAppeared(let id):
