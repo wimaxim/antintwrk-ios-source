@@ -1,0 +1,38 @@
+## User settings
+xcuserdata/
+
+## Obj-C/Swift specific
+*.hmap
+
+## App packaging
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.xcarchive
+
+## SwiftPM
+.build
+/Packages
+xcuserdata/
+DerivedData/
+.swiftpm
+.netrc
+
+build
+/vendor/
+*/xcshareddata/xcodecloud
+
+## macOS Files
+.DS_Store
+._*
+
+## Editors
+.nova
+.vscode
+
+## Project specific
+test_output
+
+# Only commit Pkl packages (there may be other caches in here).
+Components/Secrets/vendor/*
+!Components/Secrets/vendor/package-2
