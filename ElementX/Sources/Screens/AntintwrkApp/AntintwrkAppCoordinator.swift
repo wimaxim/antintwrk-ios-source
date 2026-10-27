@@ -1,6 +1,7 @@
 // Copyright 2026 Super David Universe LLC.
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import Compound
 import SwiftUI
 
 final class AntintwrkAppCoordinator: CoordinatorProtocol {
@@ -172,7 +173,15 @@ struct AntintwrkAppScreen: View {
                                     }.foregroundStyle(.black).padding(14).frame(maxWidth: .infinity).background(.white, in: RoundedRectangle(cornerRadius: 8))
                                 }.buttonStyle(.plain).disabled(model.busy).accessibilityLabel(model.text("screen_antintwrk_google"))
                                 if model.client.configuration.passkeysAvailable {
-                                    Button(model.text("screen_antintwrk_passkey")) { Task { await model.passkey() } }.disabled(model.busy)
+                                    Button { Task { await model.passkey() } } label: {
+                                        HStack(spacing: 12) {
+                                            CompoundIcon(\.devicePasskey).accessibilityHidden(true)
+                                            Text(model.text("screen_antintwrk_passkey")).fixedSize(horizontal: false, vertical: true)
+                                        }.frame(maxWidth: .infinity, minHeight: 24)
+                                    }
+                                    .buttonStyle(.compound(.secondary))
+                                    .disabled(model.busy)
+                                    .accessibilityIdentifier("antintwrk-auth-passkey")
                                 }
                                 Button(model.text("screen_antintwrk_reset")) { model.switchAccountForm(to: .reset) }.disabled(model.busy).accessibilityIdentifier("antintwrk-auth-reset")
                             }

@@ -33,6 +33,8 @@ final class UserFlowTests: XCTestCase {
         XCTAssertTrue(password.exists)
         email.tap()
         email.typeText("invalid-address")
+        // On compact screens at accessibility sizes, the keyboard can cover the next field's tap centre.
+        app.keyboards.buttons["Return"].tap()
         password.tap()
         password.typeText("ANTINTWRK_UI_PASSWORD_MUST_NOT_APPEAR_2026")
         app.keyboards.buttons["Return"].tap()
