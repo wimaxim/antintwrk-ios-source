@@ -246,7 +246,7 @@ final class AntintwrkAppleStoreDriver: AntintwrkStoreDriver {
         guard AppStore.canMakePayments,
               let product = try await Product.products(for: [order.productID]).first,
               product.id == order.productID else { throw AntintwrkStoreKit.Failure.unavailable }
-        guard case let .verified(app) = try await AppTransaction.shared, app.bundleID == "com.antintwrk.app" else { throw AntintwrkStoreKit.Failure.invalidReceipt }
+        guard case let .verified(app) = try await appTransaction(), app.bundleID == "com.antintwrk.app" else { throw AntintwrkStoreKit.Failure.invalidReceipt }
         #if DEBUG
         let localFixture = ProcessInfo.processInfo.environment["ANTINTWRK_STOREKIT_LOCAL_TEST"] == "1" && ProcessInfo.processInfo.environment["IS_RUNNING_UNIT_TESTS"] == "1" && app.environment == .xcode
         #else
@@ -265,6 +265,17 @@ final class AntintwrkAppleStoreDriver: AntintwrkStoreDriver {
     
     static func environmentMatches(_ expected: String, actual: AppStore.Environment) -> Bool {
         (expected == "Production" && actual == .production) || (expected == "Sandbox" && actual == .sandbox)
+    }
+    
+    private func appTransaction() async throws -> VerificationResult<AppTransaction> {
+        do {
+            return try await AppTransaction.shared
+        } catch StoreKitError.userCancelled {
+            throw StoreKitError.userCancelled
+        } catch {
+            // Purchase is an explicit user action; refresh may present Apple's authentication sheet.
+            return try await AppTransaction.refresh()
+        }
     }
     
     func unfinished() async throws -> [AntintwrkStoreReceipt] {

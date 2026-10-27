@@ -40,3 +40,6 @@ Production distribution requires the matching entitlements, export-compliance an
 Keep `LICENSE`, `LICENSE-COMMERCIAL`, upstream notices and third-party component licences. The upstream README describes its AGPL or separately agreed commercial licensing options. No commercial agreement or App Store exception is granted by this build guide. The source and build material needed for covered native modifications must remain available under the applicable licence when distributing a build.
 
 An exported source snapshot may materialize current LFS assets as ordinary Git files. That changes storage representation, not the asset contents or their licences. Private development history and operational instructions are not required to build the client and must not be published with a source snapshot.
+
+
+27 October2026: the built app bundle/executable is ANTINTWRK.app/ANTINTWRK. The Xcode target/scheme and Swift module remain ElementX so existing source imports, target IDs and tests stay compatible. Unit/preview test hosts resolve APP_NAME instead of a hardcoded ElementX.app. Export tooling reads the actual ApplicationPath from archive metadata, supporting older archives as well. CFBundleName follows APP_DISPLAY_NAME; the mention-document UTI is an array as required by Apple.
