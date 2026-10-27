@@ -3,18 +3,43 @@
 
 @testable import ElementX
 import SwiftUI
+import UserNotifications
 import WebKit
 import XCTest
 
 /// Opt-in ordinary QA account only. Real HTTP subscription boundaries; synthetic token, no real notification sent.
 final nonisolated class AntintwrkSocialPushIntegrationTests: XCTestCase {
+    /// Opt-in observation of a real remote alert already sent to this owned QA installation.
+    /// No local notification injection, provider credential or production social-event assertion.
+    @MainActor
+    func testActualRemoteAPNsAlertAfterProcessStop() async throws {
+        guard ProcessInfo.processInfo.environment["ANTINTWRK_REAL_APNS_QA"] == "1" else {
+            throw XCTSkip("Real APNs Sandbox QA is opt-in")
+        }
+        let url = URL.libraryDirectory.appending(path: "antintwrk-apns-qa-nonce.txt")
+        let nonce = try String(contentsOf: url, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+        defer { try? FileManager.default.removeItem(at: url) }
+        XCTAssertNotNil(UUID(uuidString: nonce))
+        let delivered = await UNUserNotificationCenter.current().deliveredNotifications()
+        let notification = try XCTUnwrap(delivered.first { $0.request.content.userInfo["antintwrk_qa"] as? String == nonce },
+                                         "The actual remote APNs alert is absent from delivered notifications")
+        XCTAssertTrue(notification.request.trigger is UNPushNotificationTrigger, "A local injection cannot satisfy remote-delivery acceptance")
+        XCTAssertEqual(notification.request.content.title, "ANTINTWRK QA")
+        XCTAssertEqual(notification.request.content.body, "Remote push delivery check")
+        let result: [String: Any] = ["remoteAlertDelivered": true, "pushTrigger": true, "nonce": nonce,
+                                     "physicalDevice": false, "socialPipelineAccepted": false]
+        try JSONSerialization.data(withJSONObject: result, options: [.sortedKeys])
+            .write(to: URL.libraryDirectory.appending(path: "antintwrk-real-apns-qa-result.json"), options: .atomic)
+    }
+    
     @MainActor
     func testActualPreferencesSubscriptionLogoutAndSettingsRender() async throws {
         guard ProcessInfo.processInfo.environment["ANTINTWRK_LIVE_STORE_WEB_QA"] == "1" else { throw XCTSkip("Ordinary QA fixture required") }
         let url = URL.libraryDirectory.appending(path: "antintwrk-reviewer-qa.json")
         let fields = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: String])
         defer { try? FileManager.default.removeItem(at: url) }
-        let client = try AntintwrkSocialClient(configuration: .init(productVersion: "1.0.26"), websiteDataStore: .nonPersistent())
+        let version = try XCTUnwrap(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
+        let client = try AntintwrkSocialClient(configuration: .init(productVersion: version), websiteDataStore: .nonPersistent())
         let admission = try await client.login(email: XCTUnwrap(fields["email"]), password: XCTUnwrap(fields["password"]), language: "en")
         let actor = try XCTUnwrap(admission.matrixUserId)
         let originalData = try await client.pushRequest("push-settings", actor: actor)

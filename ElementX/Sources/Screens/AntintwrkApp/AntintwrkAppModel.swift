@@ -96,6 +96,7 @@ final class AntintwrkAppModel {
     }
     
     func bootstrap() async {
+        MXLog.info("Social startup: preparing transport")
         do { try await client.prepareRegionalTransport() }
         catch { self.error = text("screen_ant_auth_request_error"); booting = false; return }
         geographyMonitor = AntintwrkGeographyMonitor { [weak self] in await self?.prepareGeography() }
@@ -107,7 +108,9 @@ final class AntintwrkAppModel {
             UserDefaults.standard.set(true, forKey: "antintwrk.socialInstallation")
         }
         if !UserDefaults.standard.bool(forKey: "antintwrk.explicitlyLoggedOut") {
+            MXLog.info("Social startup: restoring admission")
             let existing = try? await client.session()
+            MXLog.info("Social startup: admission request complete")
             if let existing, existing.stage != .login {
                 await accept(existing)
             } else if let actor = client.cachedMessengerActor {
@@ -118,18 +121,30 @@ final class AntintwrkAppModel {
                 startMessenger(cached)
             }
         }
+        MXLog.info("Social startup: waiting for minimum visible duration")
         while visibleDuration + (visibleSince?.duration(to: .now) ?? .zero) < .seconds(2) {
             guard !Task.isCancelled else { return }
             try? await Task.sleep(for: .milliseconds(50))
         }
         booting = false
+        MXLog.info("Social startup: ready")
         if let pendingSocialNotification {
             self.pendingSocialNotification = nil
             handleSocialNotification(pendingSocialNotification)
         }
     }
     
+    func applicationActivityChanged(_ state: UIApplication.State) {
+        switch state {
+        case .active: activityChanged(.active)
+        case .inactive: activityChanged(.inactive)
+        case .background: activityChanged(.background)
+        @unknown default: activityChanged(.inactive)
+        }
+    }
+    
     func activityChanged(_ phase: ScenePhase) {
+        MXLog.verbose("Social lifecycle: \(String(describing: phase)), startup \(booting)")
         if phase == .background {
             foregroundEpoch = UUID()
             if let appLockService, !appLockService.isEnabled {

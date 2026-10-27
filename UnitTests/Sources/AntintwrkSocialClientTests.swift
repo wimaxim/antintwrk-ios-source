@@ -11,10 +11,10 @@ struct AntintwrkSocialClientTests {
         let model = AntintwrkAppModel()
         let service = AppLockServiceMock.mock(pinCode: nil, biometryType: .faceID)
         model.appLockService = service
-        model.activityChanged(.active)
-        model.activityChanged(.inactive)
+        model.applicationActivityChanged(.active)
+        model.applicationActivityChanged(.inactive)
         #expect(service.applicationDidEnterBackgroundCallsCount == 0)
-        model.activityChanged(.background)
+        model.applicationActivityChanged(.background)
         #expect(service.applicationDidEnterBackgroundCallsCount == 1)
     }
     

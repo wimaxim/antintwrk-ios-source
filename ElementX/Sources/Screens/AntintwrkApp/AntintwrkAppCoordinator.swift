@@ -53,7 +53,6 @@ final class AntintwrkAppCoordinator: CoordinatorProtocol {
 
 struct AntintwrkAppScreen: View {
     @Bindable var model: AntintwrkAppModel
-    @Environment(\.scenePhase) private var scenePhase
     
     var body: some View {
         Group {
@@ -69,8 +68,14 @@ struct AntintwrkAppScreen: View {
             }
         }
         .preferredColorScheme(.dark)
-        .task { model.activityChanged(scenePhase); await model.bootstrap() }
-        .onChange(of: scenePhase) { _, phase in model.activityChanged(phase) }
+        .task {
+            // WindowManager hosts this view outside SwiftUI's WindowGroup environment.
+            model.applicationActivityChanged(UIApplication.shared.applicationState)
+            await model.bootstrap()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in model.applicationActivityChanged(.active) }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in model.applicationActivityChanged(.inactive) }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in model.applicationActivityChanged(.background) }
         .sheet(isPresented: $model.commonSettingsPresented) { AntintwrkCommonSettingsScreen(model: model) }
         .sheet(isPresented: $model.licencesPresented) {
             ElementNavigationStack {
