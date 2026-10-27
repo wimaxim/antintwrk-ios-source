@@ -115,11 +115,21 @@ struct AntintwrkStoreBridgeTests {
         #expect(fixture.server.prepared == nil && fixture.driver.purchases == 0)
     }
     
+    @Test func checkingStatusCannotClaimAnUnresolvedApprovalWasRestored() async throws {
+        let fixture = Fixture()
+        fixture.bridge.activate(actor: actor)
+        try fixture.pending.begin(.init(actor: actor, productID: "kindness_1000", request: .init(key: "kindness_1000", requestKey: "fixture", applicationID: 0, gratitude: nil), accountToken: UUID(), checkoutAllowed: true))
+        let reply = try await fixture.bridge.request(["type": "store-restore"], actor: actor)
+        #expect(reply["state"] as? String == "pending")
+        #expect(fixture.driver.purchases == 0)
+    }
+    
     private final class Fixture {
         let transport = Transport()
         let server = Server()
         let driver = Driver()
-        lazy var store = AntintwrkStoreKit(driver: driver, server: server, pending: Pending())
+        let pending = Pending()
+        lazy var store = AntintwrkStoreKit(driver: driver, server: server, pending: pending)
         var price = "9,99 €"
         var product = "kindness_1000"
         var omitPrices = false
@@ -143,12 +153,23 @@ struct AntintwrkStoreBridgeTests {
     }
     
     private final class Pending: AntintwrkStorePending {
+        private var entries: [UUID: AntintwrkStoreOrder] = [:]
         func contains(actor: String, productID: String) throws -> Bool {
-            false
+            entries.values.contains { $0.actor == actor && $0.productID == productID }
         }
         
-        func begin(_ order: AntintwrkStoreOrder) throws { }
-        func remove(actor: String, token: UUID) throws { }
+        func tokens(actor: String) throws -> Set<UUID> {
+            Set(entries.filter { $0.value.actor == actor }.map(\.key))
+        }
+        
+        func begin(_ order: AntintwrkStoreOrder) throws {
+            entries[order.accountToken] = order
+        }
+        
+        func remove(actor: String, token: UUID) throws {
+            guard entries[token]?.actor == actor else { return }
+            entries[token] = nil
+        }
     }
     
     private final class Server: AntintwrkStoreServer {

@@ -31,7 +31,9 @@
       },
       "selectedTests": [
         "AntintwrkAppleStoreDriverTests/testLocalStorePurchasePreservesBindingUntilExplicitFinish()",
-        "AntintwrkAppleStoreDriverTests/testLocalBadgeProductsPreserveOwnedApplicationTokens()"
+        "AntintwrkAppleStoreDriverTests/testLocalBadgeProductsPreserveOwnedApplicationTokens()",
+        "AntintwrkAppleStoreDriverTests/testLocalDeclinedApprovalDoesNotBecomeFalseRestorationOrAnotherCharge()",
+        "AntintwrkAppleStoreDriverTests/testLocalApprovedRequestSettlesOnceAndRemovesDurablePendingBinding()"
       ]
     }
   ],

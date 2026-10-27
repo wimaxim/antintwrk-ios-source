@@ -259,6 +259,41 @@ struct AntintwrkStoreKitTests {
         #expect(fixture.driver.purchases == 2)
     }
     
+    @Test func restoreDoesNotDeclareAnUnresolvedApprovalRestored() async throws {
+        let fixture = Fixture()
+        fixture.driver.result = .pending
+        #expect(try await fixture.store.purchase(fixture.request) == .pending)
+        let replacement = AntintwrkStoreKit(driver: fixture.driver, server: fixture.server, pending: fixture.pending)
+        replacement.activate(actor: "fixture-actor")
+        let result = try await replacement.restore(userInitiated: true)
+        #expect(result.pending == 1 && result.credited == 0 && result.failed == 0)
+        #expect(fixture.driver.purchases == 1 && fixture.driver.syncs == 1)
+        #expect(try await replacement.purchase(fixture.request) == .pending)
+        #expect(fixture.driver.purchases == 1)
+    }
+    
+    @Test func restoreCountsReceiptAndDurableIntentOnlyOnce() async throws {
+        let fixture = Fixture()
+        fixture.driver.result = .pending
+        #expect(try await fixture.store.purchase(fixture.request) == .pending)
+        fixture.driver.restorable = [fixture.receipt]
+        fixture.server.state = .pending
+        let result = try await fixture.store.restore(userInitiated: false)
+        #expect(result.pending == 1 && fixture.driver.finished.isEmpty)
+        fixture.server.state = .credited
+        let settled = try await fixture.store.restore(userInitiated: false)
+        #expect(settled.pending == 0 && settled.credited == 1)
+        #expect(try fixture.pending.tokens(actor: "fixture-actor").isEmpty)
+    }
+    
+    @Test func restoreNeverIncludesAnotherActorsUnresolvedApproval() async throws {
+        let fixture = Fixture()
+        try fixture.pending.begin(.init(actor: "other", productID: "kindness", request: fixture.request, accountToken: UUID(), checkoutAllowed: true))
+        let result = try await fixture.store.restore(userInitiated: true)
+        #expect(result.pending == 0 && result.failed == 0)
+        #expect(try fixture.pending.tokens(actor: "other").count == 1)
+    }
+    
     @Test func failedIntentPersistenceNeverOpensPaymentAndCanRetryAfterRepair() async throws {
         let fixture = Fixture()
         fixture.pending.beginFailure = true
@@ -278,6 +313,8 @@ struct AntintwrkStoreKitTests {
         try AntintwrkStorePendingKeychain(keychain: keychain).begin(order)
         let restored = AntintwrkStorePendingKeychain(keychain: keychain)
         #expect(try restored.contains(actor: order.actor, productID: order.productID))
+        #expect(try restored.tokens(actor: order.actor) == [order.accountToken])
+        #expect(try restored.tokens(actor: "other-actor").isEmpty)
         #expect(try !restored.contains(actor: "other-actor", productID: order.productID))
         try restored.remove(actor: "other-actor", token: fixture.token)
         #expect(try restored.contains(actor: order.actor, productID: order.productID))
@@ -285,6 +322,7 @@ struct AntintwrkStoreKitTests {
         #expect(try !restored.contains(actor: order.actor, productID: order.productID))
         try keychain.set(Data("broken".utf8), key: "antintwrk.store.pending.v1")
         #expect(throws: (any Error).self) { try restored.contains(actor: order.actor, productID: order.productID) }
+        #expect(throws: (any Error).self) { try restored.tokens(actor: order.actor) }
     }
     
     @Test func checkoutEnvironmentNeverFallsBackBetweenAppleRealms() {
@@ -407,6 +445,10 @@ private final class AntintwrkStorePendingMemory: AntintwrkStorePending {
     var beginFailure = false
     func contains(actor: String, productID: String) throws -> Bool {
         entries.values.contains { $0.0 == actor && $0.1 == productID }
+    }
+    
+    func tokens(actor: String) throws -> Set<UUID> {
+        Set(entries.filter { $0.value.0 == actor }.map(\.key))
     }
     
     func begin(_ order: AntintwrkStoreOrder) throws {

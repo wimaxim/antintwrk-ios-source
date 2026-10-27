@@ -13,6 +13,7 @@ final nonisolated class AntintwrkStoreWebIntegrationTests: XCTestCase {
         guard ProcessInfo.processInfo.environment["ANTINTWRK_LIVE_STORE_WEB_QA"] == "1" else {
             throw XCTSkip("Live ordinary-reviewer QA is opt-in")
         }
+        executionTimeAllowance = 180
         let credentialURL = URL.libraryDirectory.appending(path: "antintwrk-reviewer-qa.json")
         let data = try Data(contentsOf: credentialURL)
         defer { try? FileManager.default.removeItem(at: credentialURL) }
@@ -22,9 +23,13 @@ final nonisolated class AntintwrkStoreWebIntegrationTests: XCTestCase {
         let model = AntintwrkAppModel()
         model.language = "en" // The refund-disclosure assertion below checks the English page.
         let client = model.client
+        try await client.clearForExplicitLogin() // Match the app's explicit account-entry path on this dedicated QA installation.
+        MXLog.info("ANTINTWRK QA: ordinary login started")
         let admission = try await client.login(email: email, password: password, language: "en")
         XCTAssertEqual(admission.stage, .authenticated)
+        MXLog.info("ANTINTWRK QA: ordinary login accepted")
         await model.accept(admission)
+        MXLog.info("ANTINTWRK QA: social surface admitted")
         XCTAssertTrue(model.page == .social)
         let surface = try XCTUnwrap(model.social)
         var requests = 0
@@ -55,6 +60,7 @@ final nonisolated class AntintwrkStoreWebIntegrationTests: XCTestCase {
             }
             XCTAssertTrue(ready, "Authenticated social module did not become ready")
             guard ready else { throw AntintwrkStoreKit.Failure.unavailable }
+            MXLog.info("ANTINTWRK QA: actual web bridge ready")
             // Sales remain disabled. Exercise real page → WK frame checks → native actor → authenticated API → page error.
             let script = "return await Promise.race([window.antintwrkStoreRequest({type:'store-catalog'}).then(()=>'unexpected-enabled').catch(e=>e.message),new Promise(r=>setTimeout(()=>r('bridge-timeout'),12000))])"
             let response = try await web.callAsyncJavaScript(script, in: nil, contentWorld: .page)
@@ -64,6 +70,7 @@ final nonisolated class AntintwrkStoreWebIntegrationTests: XCTestCase {
             _ = try await web.evaluateJavaScript("(()=>{let f=document.createElement('iframe');f.srcdoc='<script>window.webkit.messageHandlers.antintwrk.postMessage(JSON.stringify({type:\"store-catalog\",id:\"qa-subframe\"}))<\\/script>';document.body.append(f)})()")
             try await Task.sleep(for: .milliseconds(400))
             XCTAssertEqual(requests, previous, "A subframe reached native checkout")
+            MXLog.info("ANTINTWRK QA: closed catalog and subframe guards accepted")
             let snapshot: UIImage = try await withCheckedThrowingContinuation { continuation in
                 web.takeSnapshot(with: nil) { image, error in
                     if let image {
@@ -75,9 +82,11 @@ final nonisolated class AntintwrkStoreWebIntegrationTests: XCTestCase {
             }
             try snapshot.pngData()?.write(to: URL.libraryDirectory.appending(path: "antintwrk-store-web-qa.png"), options: .atomic)
             try await verifyRefundDisclosure(surface: surface, controller: controller)
+            MXLog.info("ANTINTWRK QA: refund disclosure accepted")
             surface.select(0)
             XCTAssertTrue(surface.active === web, "Returning from verification replaced the retained Feed")
             await model.logout()
+            MXLog.info("ANTINTWRK QA: logout completed")
             XCTAssertNil(model.social)
             do {
                 _ = try await handler(["type": "store-catalog"])

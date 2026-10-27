@@ -184,13 +184,17 @@ final class AntintwrkStoreKit {
         }
         try requireActor(actor, captured)
         var summary = RecoverySummary()
+        var pendingTokens = Set<UUID>()
         for receipt in try await driver.unfinished() {
             try requireActor(actor, captured)
             // A failed or different-account receipt remains unfinished; other deliveries can recover.
             do {
                 switch try await process(receipt) {
                 case .credited: summary.credited += 1
-                case .pending: summary.pending += 1
+                case .pending:
+                    if let token = receipt.accountToken {
+                        pendingTokens.insert(token)
+                    }
                 case .reversed: summary.reversed += 1
                 case .cancelled: throw Failure.invalidReceipt
                 }
@@ -199,6 +203,8 @@ final class AntintwrkStoreKit {
             }
         }
         try requireActor(actor, captured)
+        // Ask to Buy/SCA can remain unresolved without any transaction to enumerate.
+        summary.pending = try pendingTokens.union(pending.tokens(actor: actor)).count
         return summary
     }
     

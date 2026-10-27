@@ -6,6 +6,7 @@ import Foundation
 
 protocol AntintwrkStorePending {
     func contains(actor: String, productID: String) throws -> Bool
+    func tokens(actor: String) throws -> Set<UUID>
     func begin(_ order: AntintwrkStoreOrder) throws
     func remove(actor: String, token: UUID) throws
 }
@@ -29,6 +30,10 @@ final class AntintwrkStorePendingKeychain: AntintwrkStorePending {
     
     func contains(actor: String, productID: String) throws -> Bool {
         try entries().contains { $0.actor == actor && $0.productID == productID }
+    }
+    
+    func tokens(actor: String) throws -> Set<UUID> {
+        try Set(entries().filter { $0.actor == actor }.map(\.token))
     }
     
     func begin(_ order: AntintwrkStoreOrder) throws {

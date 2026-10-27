@@ -1,12 +1,22 @@
 {
-  "fill" : "automatic",
+  "fill" : {
+    "solid" : "srgb:0.04706,0.06275,0.07451,1.00000"
+  },
   "groups" : [
     {
       "layers" : [
         {
+          "fill" : "none",
           "glass" : false,
           "image-name" : "AppIcon.png",
-          "name" : "AppIcon"
+          "name" : "AppIcon",
+          "position" : {
+            "scale" : 3.2,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
         }
       ],
       "name" : "Background",
