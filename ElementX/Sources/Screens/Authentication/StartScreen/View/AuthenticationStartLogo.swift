@@ -17,7 +17,7 @@ struct AuthenticationStartLogo: View {
     /// Set to `true` when using on top of `Asset.Images.launchBackground`.
     let isOnGradient: Bool
     
-    private let appLogoImage = Image(asset: Asset.Images.appLogo)
+    private let appLogoImage = Image(asset: Asset.Images.antintwrkBrandMark)
     
     struct SizeMetrics {
         let scale: CGFloat
@@ -33,19 +33,14 @@ struct AuthenticationStartLogo: View {
     }
     
     var body: some View {
-        if let sizeMetrics {
-            appLogoImage
-                .resizable()
-                .frame(width: sizeMetrics.imageSize, height: sizeMetrics.imageSize)
-                .modifier(AuthenticationBrandLogoModifier(scale: sizeMetrics.scale,
-                                                          hideBrandChrome: hideBrandChrome,
-                                                          isOnGradient: isOnGradient))
-        } else {
-            appLogoImage
-                .modifier(AuthenticationBrandLogoModifier(scale: 1,
-                                                          hideBrandChrome: hideBrandChrome,
-                                                          isOnGradient: isOnGradient))
-        }
+        appLogoImage
+            .resizable()
+            .scaledToFit()
+            .frame(width: sizeMetrics?.imageSize ?? 110, height: sizeMetrics?.imageSize ?? 110)
+            .modifier(AuthenticationBrandLogoModifier(scale: sizeMetrics?.scale ?? 1,
+                                                      hideBrandChrome: hideBrandChrome,
+                                                      isOnGradient: isOnGradient))
+            .accessibilityHidden(true)
     }
 }
 
