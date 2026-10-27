@@ -7,7 +7,7 @@ import UserNotifications
 import WebKit
 import XCTest
 
-/// Opt-in ordinary QA account only. Real HTTP subscription boundaries; synthetic token, no real notification sent.
+/// Opt-in ordinary QA accounts only. Separate HTTP subscription and actual remote-delivery checks.
 final nonisolated class AntintwrkSocialPushIntegrationTests: XCTestCase {
     /// Opt-in observation of a real remote alert already sent to this owned QA installation.
     /// No local notification injection, provider credential or production social-event assertion.
@@ -30,6 +30,31 @@ final nonisolated class AntintwrkSocialPushIntegrationTests: XCTestCase {
                                      "physicalDevice": false, "socialPipelineAccepted": false]
         try JSONSerialization.data(withJSONObject: result, options: [.sortedKeys])
             .write(to: URL.libraryDirectory.appending(path: "antintwrk-real-apns-qa-result.json"), options: .atomic)
+    }
+    
+    @MainActor
+    func testActualSocialEventRemoteDeliveryAfterProcessStop() async throws {
+        guard ProcessInfo.processInfo.environment["ANTINTWRK_REAL_SOCIAL_PUSH_QA"] == "1" else {
+            throw XCTSkip("Real social-event APNs QA is opt-in")
+        }
+        let defaults = UserDefaults(suiteName: InfoPlistReader.main.appGroupIdentifier)
+        let binding = try XCTUnwrap(AntintwrkSocialPushBinding.load(from: defaults))
+        let delivered = await UNUserNotificationCenter.current().deliveredNotifications()
+        let notification = try XCTUnwrap(delivered.first { binding.matches($0.request.content.userInfo) },
+                                         "The real social event has no delivered remote alert for the active actor")
+        XCTAssertTrue(notification.request.trigger is UNPushNotificationTrigger)
+        XCTAssertEqual(notification.request.content.title, "ANTINTWRK")
+        let language = binding.language == "zh" ? "zh-Hans" : binding.language
+        let bundleURL = try XCTUnwrap(Bundle.main.url(forResource: language, withExtension: "lproj"))
+        let bundle = try XCTUnwrap(Bundle(url: bundleURL))
+        let expected = NSLocalizedString("screen_ant_push_new", tableName: "AntintwrkIOS", bundle: bundle, value: "", comment: "")
+        XCTAssertFalse(expected.isEmpty)
+        XCTAssertEqual(notification.request.content.body, expected, "The actor-bound NSE must localize the generic provider payload")
+        let result: [String: Any] = ["socialEventRemoteAlertDelivered": true, "pushTrigger": true,
+                                     "actorBindingMatched": true, "localizedNSEBody": notification.request.content.body == expected,
+                                     "physicalDevice": false, "deliveredAt": notification.date.timeIntervalSince1970]
+        try JSONSerialization.data(withJSONObject: result, options: [.sortedKeys])
+            .write(to: URL.libraryDirectory.appending(path: "antintwrk-real-social-push-qa-result.json"), options: .atomic)
     }
     
     @MainActor
