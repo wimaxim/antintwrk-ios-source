@@ -52,6 +52,8 @@ targets:
           UIColorName: colors/background-color
         GIDClientID: "889486529036-a92g45nspkt295p2aadfubvd38cued6k.apps.googleusercontent.com"
         GIDServerClientID: "889486529036-vdragtfp74n4g1884pl3h0ur82b855rv.apps.googleusercontent.com"
+        ANTINTWRK_PASSKEY_ENABLED: true
+        ANTINTWRK_SIGNING_TEAM: $(DEVELOPMENT_TEAM)
         CFBundleDisplayName: $(APP_DISPLAY_NAME)
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)

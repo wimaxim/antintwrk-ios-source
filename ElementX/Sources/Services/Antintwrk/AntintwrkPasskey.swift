@@ -13,7 +13,13 @@ struct AntintwrkPasskeyOptions {
               let options = json["options"] as? [String: Any], options["rpId"] as? String == "antintwrk.com",
               let challenge = options["challenge"] as? String, let bytes = Self.decode(challenge), (16...1024).contains(bytes.count) else { throw AntintwrkSocialClient.Failure.invalidResponse }
         self.ticket = ticket; self.challenge = bytes
-        let descriptors = options["allowCredentials"] as? [[String: Any]] ?? []
+        let descriptors: [[String: Any]]
+        if let rawDescriptors = options["allowCredentials"] {
+            guard let parsed = rawDescriptors as? [[String: Any]] else { throw AntintwrkSocialClient.Failure.invalidResponse }
+            descriptors = parsed
+        } else {
+            descriptors = []
+        }
         guard descriptors.count <= 64 else { throw AntintwrkSocialClient.Failure.invalidResponse }
         allowed = try descriptors.map {
             guard $0["type"] as? String == "public-key", let id = $0["id"] as? String, let data = Self.decode(id), !data.isEmpty else { throw AntintwrkSocialClient.Failure.invalidResponse }

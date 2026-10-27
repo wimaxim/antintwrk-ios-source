@@ -23,7 +23,13 @@ struct AntintwrkClientConfiguration {
     static let geographyURL = URL(string: "https://antimsg.com/app/geo")!
     
     var passkeysAvailable: Bool {
-        Bundle.main.object(forInfoDictionaryKey: "ANTINTWRK_PASSKEY_ENABLED") as? Bool == true
+        Self.canOfferPasskeys(enabled: Bundle.main.object(forInfoDictionaryKey: "ANTINTWRK_PASSKEY_ENABLED") as? Bool == true,
+                              signingTeam: Bundle.main.object(forInfoDictionaryKey: "ANTINTWRK_SIGNING_TEAM") as? String)
+    }
+    
+    // Presentation policy only; Apple validates the signed entitlement and domain association.
+    static func canOfferPasskeys(enabled: Bool, signingTeam: String?) -> Bool {
+        enabled && signingTeam == "FBV226YGHR"
     }
     
     let productVersion: String

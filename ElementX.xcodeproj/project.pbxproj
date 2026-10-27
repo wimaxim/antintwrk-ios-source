@@ -410,6 +410,7 @@
 		3DAF325D8AE461F7CDB282BD /* StartChatScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6861FE915C7B5466E6962BBA /* StartChatScreen.swift */; };
 		3E2EE5782688054B3026EF8E /* ChatsSpaceFilterCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 847C893CF354BCBDF1351C13 /* ChatsSpaceFilterCell.swift */; };
 		3E3CC3D17908A3BB9F224CC5 /* DeactivateAccountScreenCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67638D34FB6A9110BE481A6F /* DeactivateAccountScreenCoordinator.swift */; };
+		3E448C56DAC9E592DC445A61 /* AntintwrkPasskeyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B4146B3933A06BF910DCFCF /* AntintwrkPasskeyTests.swift */; };
 		3E7B65C2C97748D5D65AAA8B /* NotificationPermissionsScreenModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DB2FC2AA9A07EE792DF65CF /* NotificationPermissionsScreenModels.swift */; };
 		3EC5A41F9FB7DD63A4DC6144 /* RoomChangeRolesScreenViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B14B1DE3E2D5D26732C49036 /* RoomChangeRolesScreenViewModel.swift */; };
 		3EC698F80DDEEFA273857841 /* ArrayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 893777A4997BBDB68079D4F5 /* ArrayTests.swift */; };
@@ -2102,6 +2103,7 @@
 		2AE83A3DD63BCFBB956FE5CB /* nl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = nl; path = nl.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
 		2AF715D4FD4710EBB637D661 /* SettingsScreenViewModelProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreenViewModelProtocol.swift; sourceTree = "<group>"; };
 		2B1FB56520A847DD2532D5C8 /* VideoMediaEventsTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoMediaEventsTimelineView.swift; sourceTree = "<group>"; };
+		2B4146B3933A06BF910DCFCF /* AntintwrkPasskeyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntintwrkPasskeyTests.swift; sourceTree = "<group>"; };
 		2B67DC84B42D86035FCFF6F8 /* NavigationTabCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationTabCoordinatorTests.swift; sourceTree = "<group>"; };
 		2B9BCACD0CC4CB8E37F17732 /* lt */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = lt; path = lt.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
 		2BA894BC09972DC45E497D37 /* TimelineInteractionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineInteractionHandler.swift; sourceTree = "<group>"; };
@@ -5397,6 +5399,7 @@
 				3353A3B6D504E2BA59885F99 /* AntintwrkCallToneTests.swift */,
 				A70A5B18BCCC7634A4CC1BA6 /* AntintwrkIncomingCallTests.swift */,
 				920FF5753154C1548CDD1DF3 /* AntintwrkMessengerConfigurationTests.swift */,
+				2B4146B3933A06BF910DCFCF /* AntintwrkPasskeyTests.swift */,
 				14AB0EFE7526C5D3E496C9BB /* AntintwrkRegionalTransportTests.swift */,
 				D26E431EC3F41E53F8E17BFB /* AntintwrkSocialClientTests.swift */,
 				0DF0C459ACDDD9E9CCCA2A85 /* AntintwrkSocialPushIntegrationTests.swift */,
@@ -8597,6 +8600,7 @@
 				7EB943A2DC9F298CEBF44F16 /* AntintwrkCallToneTests.swift in Sources */,
 				C89A4783AC63BAA54DC2555C /* AntintwrkIncomingCallTests.swift in Sources */,
 				FB811399D84F84B7E852FBDE /* AntintwrkMessengerConfigurationTests.swift in Sources */,
+				3E448C56DAC9E592DC445A61 /* AntintwrkPasskeyTests.swift in Sources */,
 				64E5EE212A2B3FE35560B9B2 /* AntintwrkRegionalTransportTests.swift in Sources */,
 				DDE5392F01659608DC68062A /* AntintwrkSocialClientTests.swift in Sources */,
 				5D0679EB2434C3597C6D7668 /* AntintwrkSocialPushIntegrationTests.swift in Sources */,
